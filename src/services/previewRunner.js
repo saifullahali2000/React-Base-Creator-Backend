@@ -1,13 +1,17 @@
 import { spawn, execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { writeFile, mkdir } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const PREVIEW_PORT = 4000;
 
-const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
+const IS_VERCEL = process.env.VERCEL === '1';
+const PREVIEW_WORKSPACE = IS_VERCEL
+  ? join(tmpdir(), 'rqg-preview-workspace')
+  : join(__dirname, '../../../preview-workspace');
 
 let viteProcess = null;
 let serverReady = false;
@@ -19,10 +23,12 @@ let serverReady = false;
 export function getClientPreviewUrl() {
   const u = (process.env.PUBLIC_PREVIEW_URL || '').trim();
   if (u) return u.endsWith('/') ? u.slice(0, -1) : u;
+  if (IS_VERCEL) return '';
   return `http://localhost:${PREVIEW_PORT}`;
 }
 
 export async function writePreviewFiles(solutionFiles) {
+  if (IS_VERCEL) return;
   for (const [filePath, content] of Object.entries(solutionFiles)) {
     const fullPath = join(PREVIEW_WORKSPACE, filePath);
     const dir = dirname(fullPath);
@@ -32,6 +38,7 @@ export async function writePreviewFiles(solutionFiles) {
 }
 
 export async function ensurePreviewRunning() {
+  if (IS_VERCEL) return;
   if (serverReady && viteProcess && !viteProcess.killed) return;
 
   const nodeModules = join(PREVIEW_WORKSPACE, 'node_modules');
