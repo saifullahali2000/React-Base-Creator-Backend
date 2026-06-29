@@ -33,6 +33,70 @@ function readAssessmentModeFromBody(body) {
 
 const app = express();
 app.use(cors());
+
+const PROXY_HEADER_BLOCK = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'transfer-encoding',
+  'accept-encoding',
+]);
+
+/** Forward app API calls from Sandpack preview (avoids browser CORS). Must run before express.json(). */
+async function handlePreviewProxy(req, res) {
+  try {
+    const target = typeof req.query.url === 'string' ? req.query.url.trim() : '';
+    if (!target) return res.status(400).json({ error: 'Missing url query parameter' });
+
+    let targetUrl;
+    try {
+      targetUrl = new URL(target);
+    } catch {
+      return res.status(400).json({ error: 'Invalid url' });
+    }
+    if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+      return res.status(400).json({ error: 'Only http(s) URLs are allowed' });
+    }
+
+    const forwardHeaders = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      const lower = key.toLowerCase();
+      if (PROXY_HEADER_BLOCK.has(lower) || lower.startsWith('x-forwarded')) continue;
+      if (Array.isArray(value)) forwardHeaders[key] = value.join(', ');
+      else if (value) forwardHeaders[key] = value;
+    }
+
+    const method = (req.method || 'GET').toUpperCase();
+    const hasBody = method !== 'GET' && method !== 'HEAD';
+    const body =
+      hasBody && req.body && req.body.length
+        ? req.body
+        : hasBody && typeof req.body === 'string'
+          ? req.body
+          : undefined;
+
+    const upstream = await fetch(target, {
+      method,
+      headers: forwardHeaders,
+      body,
+    });
+
+    res.status(upstream.status);
+    upstream.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (['transfer-encoding', 'connection', 'content-encoding'].includes(lower)) return;
+      res.setHeader(key, value);
+    });
+
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
+  } catch (err) {
+    res.status(502).json({ error: err.message || 'Proxy request failed' });
+  }
+}
+
+app.all('/api/preview-proxy', express.raw({ type: '*/*', limit: '15mb' }), handlePreviewProxy);
+
 app.use(express.json({ limit: '50mb' }));
 
 /** Proxy Vite preview on Render (not on Vercel serverless). */
@@ -204,61 +268,6 @@ app.post('/api/generate', upload.array('screenshots', 24), async (req, res) => {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
-});
-
-const PROXY_HEADER_BLOCK = new Set([
-  'host',
-  'connection',
-  'content-length',
-  'transfer-encoding',
-  'accept-encoding',
-]);
-
-/** Forward app API calls from Sandpack preview (avoids browser CORS). */
-app.all('/api/preview-proxy', express.raw({ type: '*/*', limit: '15mb' }), async (req, res) => {
-  try {
-    const target = typeof req.query.url === 'string' ? req.query.url.trim() : '';
-    if (!target) return res.status(400).json({ error: 'Missing url query parameter' });
-
-    let targetUrl;
-    try {
-      targetUrl = new URL(target);
-    } catch {
-      return res.status(400).json({ error: 'Invalid url' });
-    }
-    if (!['http:', 'https:'].includes(targetUrl.protocol)) {
-      return res.status(400).json({ error: 'Only http(s) URLs are allowed' });
-    }
-
-    const forwardHeaders = {};
-    for (const [key, value] of Object.entries(req.headers)) {
-      const lower = key.toLowerCase();
-      if (PROXY_HEADER_BLOCK.has(lower) || lower.startsWith('x-forwarded')) continue;
-      if (Array.isArray(value)) forwardHeaders[key] = value.join(', ');
-      else if (value) forwardHeaders[key] = value;
-    }
-
-    const method = (req.method || 'GET').toUpperCase();
-    const hasBody = method !== 'GET' && method !== 'HEAD';
-
-    const upstream = await fetch(target, {
-      method,
-      headers: forwardHeaders,
-      body: hasBody && req.body?.length ? req.body : undefined,
-    });
-
-    res.status(upstream.status);
-    upstream.headers.forEach((value, key) => {
-      const lower = key.toLowerCase();
-      if (['transfer-encoding', 'connection', 'content-encoding'].includes(lower)) return;
-      res.setHeader(key, value);
-    });
-
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.send(buf);
-  } catch (err) {
-    res.status(502).json({ error: err.message || 'Proxy request failed' });
-  }
 });
 
 app.post('/api/openrouter/models', async (req, res) => {
