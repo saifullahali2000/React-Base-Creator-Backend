@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const IS_VERCEL = process.env.VERCEL === '1';
+/** True only on Vercel serverless (not when Vercel CLI sets VERCEL=1 locally). */
+const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
 
 /** Vercel serverless: only /tmp is writable. Render/VPS: use disk or DATABASE_PATH. */
 const DB_PATH =

@@ -13,7 +13,7 @@ import { applyPortalPostProcess } from './services/portalPostProcess.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const IS_VERCEL = process.env.VERCEL === '1';
+const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
 
 /** Legacy DB rows used "topic_base"; API returns "topin_base" for the full IDE flow. */
 function normalizeAssessmentModeForApi(m) {
