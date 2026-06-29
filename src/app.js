@@ -13,6 +13,8 @@ import { applyPortalPostProcess } from './services/portalPostProcess.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
+const IS_VERCEL = process.env.VERCEL === '1';
+
 /** Legacy DB rows used "topic_base"; API returns "topin_base" for the full IDE flow. */
 function normalizeAssessmentModeForApi(m) {
   if (m === 'open_book') return 'open_book';
@@ -34,7 +36,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 /** Proxy Vite preview on Render (not on Vercel serverless). */
-if (process.env.VERCEL !== '1') {
+if (!IS_VERCEL) {
   app.use(
     '/preview',
     createProxyMiddleware({
