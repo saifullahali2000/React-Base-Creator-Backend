@@ -13,6 +13,7 @@
     "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.5",
     "jsonrepair": "^3.14.0",
     "multer": "^1.4.5-lts.2",
     "openai": "^6.45.0",

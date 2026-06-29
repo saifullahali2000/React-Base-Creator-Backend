@@ -6,11 +6,12 @@ import { generateQuestionGemini } from './services/gemini.js';
 import { generateQuestionDeepseek, generateQuestionGrok, generateQuestionOpenrouter } from './services/openaiCompatible.js';
 import { listOpenRouterModels } from './services/openrouter.js';
 import { buildZip } from './services/zipBuilder.js';
-import { writePreviewFiles, ensurePreviewRunning, getClientPreviewUrl } from './services/previewRunner.js';
+import { writePreviewFiles, ensurePreviewRunning, getClientPreviewUrl, PREVIEW_PORT } from './services/previewRunner.js';
 import { initDb, saveGeneration, getGeneration, updateGenerationPayload } from './services/db.js';
 import { applySampleTemplates } from './services/sampleTemplateMerge.js';
 import { applyPortalPostProcess } from './services/portalPostProcess.js';
 import { v4 as uuidv4 } from 'uuid';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 /** Legacy DB rows used "topic_base"; API returns "topin_base" for the full IDE flow. */
 function normalizeAssessmentModeForApi(m) {
@@ -31,6 +32,16 @@ function readAssessmentModeFromBody(body) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+
+/** Proxy Vite preview (port 4000) for remote hosts e.g. Render → /preview */
+app.use(
+  '/preview',
+  createProxyMiddleware({
+    target: `http://127.0.0.1:${PREVIEW_PORT}`,
+    changeOrigin: true,
+    ws: true,
+  }),
+);
 
 initDb();
 
