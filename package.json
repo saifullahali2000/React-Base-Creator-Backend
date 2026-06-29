@@ -1,0 +1,21 @@
+{
+  "name": "react-question-generator-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@google/generative-ai": "^0.24.1",
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonrepair": "^3.14.0",
+    "multer": "^1.4.5-lts.2",
+    "openai": "^6.45.0",
+    "uuid": "^11.0.5"
+  }
+}
