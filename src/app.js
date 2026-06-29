@@ -33,15 +33,17 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-/** Proxy Vite preview (port 4000) for remote hosts e.g. Render → /preview */
-app.use(
-  '/preview',
-  createProxyMiddleware({
-    target: `http://127.0.0.1:${PREVIEW_PORT}`,
-    changeOrigin: true,
-    ws: true,
-  }),
-);
+/** Proxy Vite preview on Render (not on Vercel serverless). */
+if (process.env.VERCEL !== '1') {
+  app.use(
+    '/preview',
+    createProxyMiddleware({
+      target: `http://127.0.0.1:${PREVIEW_PORT}`,
+      changeOrigin: true,
+      ws: true,
+    }),
+  );
+}
 
 initDb();
 

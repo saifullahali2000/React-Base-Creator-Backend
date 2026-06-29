@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const PREVIEW_PORT = 4000;
 
+const IS_VERCEL = process.env.VERCEL === '1';
 const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
 
 let viteProcess = null;
@@ -30,6 +31,8 @@ export function getClientPreviewUrl() {
   const explicit = (process.env.PUBLIC_PREVIEW_URL || '').trim();
   if (explicit) return explicit.endsWith('/') ? explicit.slice(0, -1) : explicit;
 
+  if (IS_VERCEL) return '';
+
   const renderUrl = (process.env.RENDER_EXTERNAL_URL || '').trim();
   if (renderUrl) {
     const base = renderUrl.endsWith('/') ? renderUrl.slice(0, -1) : renderUrl;
@@ -40,6 +43,7 @@ export function getClientPreviewUrl() {
 }
 
 export async function writePreviewFiles(solutionFiles) {
+  if (IS_VERCEL) return;
   for (const [filePath, content] of Object.entries(solutionFiles)) {
     const fullPath = join(PREVIEW_WORKSPACE, filePath);
     const dir = dirname(fullPath);
@@ -49,6 +53,7 @@ export async function writePreviewFiles(solutionFiles) {
 }
 
 export async function ensurePreviewRunning() {
+  if (IS_VERCEL) return;
   if (serverReady && viteProcess && !viteProcess.killed) return;
 
   const nodeModules = join(PREVIEW_WORKSPACE, 'node_modules');

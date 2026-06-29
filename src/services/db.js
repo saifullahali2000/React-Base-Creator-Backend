@@ -1,13 +1,17 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
+import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Override with DATABASE_PATH for a custom SQLite location (e.g. Render persistent disk). */
+/** Vercel serverless: only /tmp is writable. Render/VPS: use disk or DATABASE_PATH. */
 const DB_PATH =
-  process.env.DATABASE_PATH || join(__dirname, '../../data/generations.db');
+  process.env.DATABASE_PATH ||
+  (process.env.VERCEL === '1'
+    ? join(tmpdir(), 'rqg-generations.db')
+    : join(__dirname, '../../data/generations.db'));
 
 /** @type {import('better-sqlite3').Database | null} */
 let db = null;
