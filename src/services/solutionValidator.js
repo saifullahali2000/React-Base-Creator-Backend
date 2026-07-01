@@ -100,12 +100,19 @@ export async function validateSolutionBuild(solution) {
     const linked = await linkNodeModules(workDir);
 
     if (!linked) {
-      execSync('npm install --prefer-offline --no-audit --no-fund', {
-        cwd: workDir,
-        stdio: 'pipe',
-        shell: true,
-        timeout,
-      });
+      try {
+        execSync('npm install --prefer-offline --no-audit --no-fund', {
+          cwd: workDir,
+          stdio: 'pipe',
+          shell: true,
+          timeout,
+        });
+      } catch (installErr) {
+        const detail = installErr.stderr?.toString?.() || installErr.message || String(installErr);
+        throw new Error(
+          `npm install failed during solution validation. Run once: npm install --prefix preview-workspace\n${detail.slice(0, 800)}`,
+        );
+      }
     }
 
     let buildLog = '';
