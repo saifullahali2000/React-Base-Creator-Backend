@@ -20,7 +20,6 @@ import {
 import { repairGeneratedSolution } from './services/solutionRepair.js';
 import { estimateGenerationInputTokens } from './services/tokenEstimate.js';
 import { v4 as uuidv4 } from 'uuid';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
 
@@ -154,6 +153,7 @@ app.use(express.json({ limit: '50mb' }));
 
 /** Proxy Vite preview on Render (not on Vercel serverless). */
 if (!IS_VERCEL) {
+  const { createProxyMiddleware } = await import('http-proxy-middleware');
   app.use(
     '/preview',
     createProxyMiddleware({

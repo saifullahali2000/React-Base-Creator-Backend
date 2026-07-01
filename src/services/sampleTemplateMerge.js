@@ -7,9 +7,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** Repo root (React Base Creator), from backend/src/services */
 const REPO_ROOT = join(__dirname, '../../..');
 
-export const SAMPLE_PREFILLED_DIR = join(REPO_ROOT, 'Sample_Folder', 'Ecommerce');
-export const SAMPLE_SOLUTION_DIR = join(REPO_ROOT, 'Sample_Folder', 'Ecommerce_Solution');
-export const SAMPLE_TESTS_DIR = join(REPO_ROOT, 'Sample_Folder', 'Ecommerce_Tests');
+function resolveSampleSubdir(folderName) {
+  const candidates = [
+    join(REPO_ROOT, 'Sample_Folder', folderName),
+    join(process.cwd(), 'Sample_Folder', folderName),
+    join(__dirname, '../../../Sample_Folder', folderName),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return candidates[0];
+}
+
+export const SAMPLE_PREFILLED_DIR = resolveSampleSubdir('Ecommerce');
+export const SAMPLE_SOLUTION_DIR = resolveSampleSubdir('Ecommerce_Solution');
+export const SAMPLE_TESTS_DIR = resolveSampleSubdir('Ecommerce_Tests');
 
 /** Must match portal / Sample_Folder (prefilled + solution). */
 export const CANONICAL_ROOT_FILES = [

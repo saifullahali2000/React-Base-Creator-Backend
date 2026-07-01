@@ -52,7 +52,13 @@ function migrateGenerationsAssessmentMode() {
 }
 
 function initSqlite() {
-  const Database = require('better-sqlite3');
+  let Database;
+  try {
+    Database = require('better-sqlite3');
+  } catch (err) {
+    console.error('[db] better-sqlite3 not available:', err.message);
+    return null;
+  }
   mkdirSync(dirname(DB_PATH), { recursive: true });
   db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
