@@ -40,7 +40,15 @@ function readAssessmentModeFromBody(body) {
 }
 
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 const FRONTEND_DEV_URL = (process.env.FRONTEND_DEV_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const LOCAL_PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
