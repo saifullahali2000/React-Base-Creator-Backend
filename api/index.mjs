@@ -3,7 +3,7 @@
  * @see docs/DEPLOY_VERCEL.md
  */
 export const config = {
-  maxDuration: 300,
+  maxDuration: 60,
 };
 
 let handler;
