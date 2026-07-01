@@ -1,3 +1,4 @@
 data/*.db
 data/*.db-journal
 node_modules/
+Sample_Folder/

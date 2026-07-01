@@ -1,12 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
+  "installCommand": "node scripts/prepare-vercel.mjs && npm install",
   "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
   "functions": {
     "api/index.mjs": {
       "maxDuration": 300,
       "memory": 3008,
-      "includeFiles": "../Sample_Folder/**"
+      "includeFiles": "Sample_Folder/**"
     }
   }
 }

@@ -151,19 +151,6 @@ app.all('/api/preview-proxy', express.raw({ type: '*/*', limit: '15mb' }), handl
 
 app.use(express.json({ limit: '50mb' }));
 
-/** Proxy Vite preview on Render (not on Vercel serverless). */
-if (!IS_VERCEL) {
-  const { createProxyMiddleware } = await import('http-proxy-middleware');
-  app.use(
-    '/preview',
-    createProxyMiddleware({
-      target: `http://127.0.0.1:${PREVIEW_PORT}`,
-      changeOrigin: true,
-      ws: true,
-    }),
-  );
-}
-
 initDb();
 
 const upload = multer({
