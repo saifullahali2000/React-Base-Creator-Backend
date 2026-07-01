@@ -52,8 +52,19 @@ export async function generateQuestionGemini({
   }
   parts.push({
     text: isOpenBook
-      ? buildOpenBookUserRequestText({ functionality, appApiBaseUrls, appApiEndpoints })
-      : buildUserRequestText({ testCaseCount, functionality, appApiBaseUrls, appApiEndpoints }),
+      ? buildOpenBookUserRequestText({
+          functionality,
+          appApiBaseUrls,
+          appApiEndpoints,
+          hasScreenshots: screenshotImages.some((img) => img?.base64),
+        })
+      : buildUserRequestText({
+          testCaseCount,
+          functionality,
+          appApiBaseUrls,
+          appApiEndpoints,
+          hasScreenshots: screenshotImages.some((img) => img?.base64),
+        }),
   });
 
   let lastParseError = null;

@@ -7,6 +7,8 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { syncTestCasesFromVitestFiles } from './testCaseSync.js';
+import { enforceTestEnumConvention } from './testCaseEnum.js';
 
 const IDE_BRIDGE_SCRIPT =
   '<script src="https://nxtwave-assessments-backend-nxtwave-media-static.s3.ap-south-1.amazonaws.com/external-scripts/ide-coding/ide_react_preview_adress_bar_bridge.js"></script>';
@@ -163,6 +165,9 @@ export function applyPortalPostProcess(generated) {
         generated.tests[viteKey] = ensurePassWithNoTestsInViteConfig(generated.tests[viteKey]);
       }
     }
+  } else {
+    enforceTestEnumConvention(generated);
+    syncTestCasesFromVitestFiles(generated);
   }
 
   return generated;

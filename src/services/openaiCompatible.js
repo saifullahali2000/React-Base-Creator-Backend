@@ -120,9 +120,21 @@ export async function generateQuestionOpenAICompatible(provider, params) {
   const resolvedModel = model || config.defaultModel;
   const isOpenBook = assessmentMode === 'open_book';
   const systemPrompt = isOpenBook ? SYSTEM_PROMPT_OPEN_BOOK : SYSTEM_PROMPT;
+  const hasScreenshots = screenshotImages.some((img) => img?.base64);
   const userText = isOpenBook
-    ? buildOpenBookUserRequestText({ functionality, appApiBaseUrls, appApiEndpoints })
-    : buildUserRequestText({ testCaseCount, functionality, appApiBaseUrls, appApiEndpoints });
+    ? buildOpenBookUserRequestText({
+        functionality,
+        appApiBaseUrls,
+        appApiEndpoints,
+        hasScreenshots,
+      })
+    : buildUserRequestText({
+        testCaseCount,
+        functionality,
+        appApiBaseUrls,
+        appApiEndpoints,
+        hasScreenshots,
+      });
 
   const userContent = buildUserMessageContent(screenshotImages, userText);
   const maxTokens = resolveMaxOutputTokens(config.maxTokensEnv, config.defaultMaxTokens);

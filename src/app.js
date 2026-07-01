@@ -5,11 +5,20 @@ import { generateQuestion } from './services/claude.js';
 import { generateQuestionGemini } from './services/gemini.js';
 import { generateQuestionDeepseek, generateQuestionGrok, generateQuestionOpenrouter } from './services/openaiCompatible.js';
 import { listOpenRouterModels } from './services/openrouter.js';
+import { listCursorModels, generateQuestionCursor } from './services/cursor.js';
 import { buildZip } from './services/zipBuilder.js';
 import { writePreviewFiles, ensurePreviewRunning, getClientPreviewUrl, PREVIEW_PORT } from './services/previewRunner.js';
 import { initDb, saveGeneration, getGeneration, updateGenerationPayload } from './services/db.js';
 import { applySampleTemplates } from './services/sampleTemplateMerge.js';
 import { applyPortalPostProcess } from './services/portalPostProcess.js';
+import { applyStaticSolutionFixes } from './services/solutionStaticFix.js';
+import {
+  validateSolutionBuild,
+  getSolutionValidateRetries,
+  isSolutionValidationEnabled,
+} from './services/solutionValidator.js';
+import { repairGeneratedSolution } from './services/solutionRepair.js';
+import { estimateGenerationInputTokens } from './services/tokenEstimate.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
@@ -33,6 +42,50 @@ function readAssessmentModeFromBody(body) {
 
 const app = express();
 app.use(cors());
+
+const FRONTEND_DEV_URL = (process.env.FRONTEND_DEV_URL || 'http://localhost:5173').replace(/\/+$/, '');
+const LOCAL_PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
+
+/** API-only server — avoid "Cannot GET /" confusion when users open :3001 in the browser. */
+app.get('/', (_req, res) => {
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>React Base Creator — API</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2.5rem auto; padding: 0 1rem; line-height: 1.55; color: #1a1a1a; }
+    h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }
+    p { margin: 0.75rem 0; }
+    code { background: #f4f4f5; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    ul { padding-left: 1.25rem; }
+    a { color: #6d28d9; }
+    .note { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>React Base Creator — backend API</h1>
+  <p>This URL is the <strong>API server</strong>, not the generated React app and not the Question Generator UI.</p>
+  <div class="note">
+    <p><strong>Open the app here:</strong> <a href="${FRONTEND_DEV_URL}">${FRONTEND_DEV_URL}</a></p>
+    <p>After you click <em>Generate</em>, open the <strong>Preview</strong> tab in that app to see the LLM-built solution (in-browser Sandpack preview).</p>
+  </div>
+  <p>Other local URLs:</p>
+  <ul>
+    <li><code>${FRONTEND_DEV_URL}</code> — Question Generator UI (use this)</li>
+    <li><code>http://localhost:3001</code> — this API (<code>/api/generate</code>, <code>/api/health</code>, …)</li>
+    <li><code>${LOCAL_PREVIEW_URL}</code> — optional Vite preview workspace (when backend hosts preview)</li>
+  </ul>
+  <p>API health: <a href="/api/health">/api/health</a></p>
+</body>
+</html>`);
+});
+
+/** Chrome DevTools probes this path; return empty success to avoid console noise. */
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
+  res.status(204).end();
+});
 
 const PROXY_HEADER_BLOCK = new Set([
   'host',
@@ -123,6 +176,7 @@ const PROVIDER_LABELS = {
   gemini: 'Gemini',
   deepseek: 'DeepSeek',
   grok: 'Grok',
+  cursor: 'Cursor',
   openrouter: 'OpenRouter',
 };
 
@@ -190,11 +244,14 @@ async function runGeneratePipeline(req, emit) {
   } else if (provider === 'grok') {
     emit({ type: 'progress', step: 1, message: 'Calling xAI Grok to generate question...' });
     generated = await generateQuestionGrok(genParams);
+  } else if (provider === 'cursor') {
+    emit({ type: 'progress', step: 1, message: 'Calling Cursor Cloud Agent to generate question...' });
+    generated = await generateQuestionCursor(genParams);
   } else if (provider === 'openrouter') {
     emit({ type: 'progress', step: 1, message: 'Calling OpenRouter to generate question...' });
     generated = await generateQuestionOpenrouter(genParams);
   } else {
-    throw new Error(`Unknown aiProvider "${provider}". Use "claude", "gemini", "deepseek", "grok", or "openrouter".`);
+    throw new Error(`Unknown aiProvider "${provider}". Use "claude", "gemini", "deepseek", "grok", "cursor", or "openrouter".`);
   }
 
   generated.generatorOptions = {
@@ -208,6 +265,62 @@ async function runGeneratePipeline(req, emit) {
 
   applySampleTemplates(generated);
   applyPortalPostProcess(generated);
+  applyStaticSolutionFixes(generated);
+
+  if (isSolutionValidationEnabled()) {
+    const validateAttempts = getSolutionValidateRetries();
+    let lastValidationErrors = [];
+    let lastValidationLog = '';
+    for (let attempt = 1; attempt <= validateAttempts; attempt++) {
+      emit({
+        type: 'progress',
+        step: 2,
+        message:
+          attempt === 1
+            ? 'Validating solution (Vite build)...'
+            : `Repairing build errors (attempt ${attempt}/${validateAttempts})...`,
+      });
+
+      if (attempt > 1) {
+        generated = await repairGeneratedSolution({
+          generated,
+          errors: lastValidationErrors,
+          buildLog: lastValidationLog,
+          provider,
+          apiKey: genParams.apiKey,
+          model: genParams.model,
+          functionality: genParams.functionality,
+        });
+        applySampleTemplates(generated);
+        applyPortalPostProcess(generated);
+        applyStaticSolutionFixes(generated);
+      }
+
+      const validation = await validateSolutionBuild(generated.solution);
+      if (validation.ok) {
+        if (attempt > 1) {
+          emit({
+            type: 'progress',
+            step: 2,
+            message: 'Solution validated — build succeeded.',
+          });
+        }
+        break;
+      }
+
+      lastValidationErrors = validation.errors;
+      lastValidationLog = validation.buildLog;
+
+      if (attempt === validateAttempts) {
+        emit({
+          type: 'progress',
+          step: 2,
+          message:
+            'Build still has issues after auto-repair; delivering best effort. Check preview devtools.',
+        });
+      }
+    }
+  }
 
   emit({ type: 'progress', step: 2, message: 'Writing preview files...' });
 
@@ -270,10 +383,43 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/estimate-tokens', (req, res) => {
+  try {
+    const body = req.body ?? {};
+    const assessmentMode =
+      body.assessmentMode === 'open_book' ? 'open_book' : 'topin_base';
+    const estimate = estimateGenerationInputTokens({
+      assessmentMode,
+      testCaseCount: body.testCaseCount,
+      functionality: typeof body.functionality === 'string' ? body.functionality : '',
+      appApiBaseUrls: typeof body.appApiBaseUrls === 'string' ? body.appApiBaseUrls : '',
+      appApiEndpoints: typeof body.appApiEndpoints === 'string' ? body.appApiEndpoints : '',
+      hasScreenshots: Boolean(body.hasScreenshots),
+      screenshots: Array.isArray(body.screenshots) ? body.screenshots : [],
+    });
+    res.json(estimate);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/openrouter/models', async (req, res) => {
   try {
     const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey : '';
     const models = await listOpenRouterModels(apiKey);
+    res.json({ models });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/cursor/models', async (req, res) => {
+  try {
+    const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey : '';
+    if (!apiKey.trim()) {
+      return res.status(400).json({ error: 'Cursor API key is required to load models.' });
+    }
+    const models = await listCursorModels(apiKey);
     res.json({ models });
   } catch (err) {
     res.status(500).json({ error: err.message });

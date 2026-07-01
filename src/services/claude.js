@@ -47,8 +47,19 @@ export async function generateQuestion({
   userContent.push({
     type: 'text',
     text: isOpenBook
-      ? buildOpenBookUserRequestText({ functionality, appApiBaseUrls, appApiEndpoints })
-      : buildUserRequestText({ testCaseCount, functionality, appApiBaseUrls, appApiEndpoints }),
+      ? buildOpenBookUserRequestText({
+          functionality,
+          appApiBaseUrls,
+          appApiEndpoints,
+          hasScreenshots: screenshotImages.some((img) => img?.base64),
+        })
+      : buildUserRequestText({
+          testCaseCount,
+          functionality,
+          appApiBaseUrls,
+          appApiEndpoints,
+          hasScreenshots: screenshotImages.some((img) => img?.base64),
+        }),
   });
 
   const maxTokens = resolveMaxOutputTokens();
