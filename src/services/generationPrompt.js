@@ -64,6 +64,7 @@ TECH STACK (always use exactly):
 - React 19, react-router-dom v7 with BrowserRouter, js-cookie v3 (cookie name: jwt_token)
 - For BrowserRouter always pass: future={{ v7_startTransition: true, v7_relativeSplatPath: true }} (silences router migration warnings in preview)
 - @testing-library/react v16, @testing-library/user-event v14, msw v2, vitest v3
+- Do NOT use prop-types or PropTypes — not in project dependencies; use plain functional components without runtime prop validation.
 
 BUILD VALIDATION (critical — backend runs vite build on your solution before preview):
 - Every import must resolve to a file path included in "solution" (or scaffold: src/main.jsx is added automatically).
@@ -231,6 +232,7 @@ STRICT — OUTPUT SHAPE:
 TECH STACK:
 - React 19, react-router-dom v7 with BrowserRouter, js-cookie v3 (cookie name: jwt_token)
 - For BrowserRouter always pass: future={{ v7_startTransition: true, v7_relativeSplatPath: true }} (silences router migration warnings in preview) when auth is relevant.
+- Do NOT use prop-types or PropTypes — not in project dependencies.
 
 BUILD VALIDATION (critical — backend runs vite build before preview):
 - Every import must resolve to a file in "solution"; use export default for default imports.

@@ -25,6 +25,33 @@ function resolveImportPath(fromFile, importPath) {
   return target;
 }
 
+/** Add runtime deps when generated code imports packages missing from scaffold package.json. */
+function augmentPackageJsonForImports(files) {
+  const pkgKey = 'package.json';
+  if (!files[pkgKey] || typeof files[pkgKey] !== 'string') return;
+  let pkg;
+  try {
+    pkg = JSON.parse(files[pkgKey]);
+  } catch {
+    return;
+  }
+  const code = Object.entries(files)
+    .filter(([k]) => k !== pkgKey && /\.(jsx|js|tsx|ts)$/i.test(k))
+    .map(([, v]) => (typeof v === 'string' ? v : ''))
+    .join('\n');
+  const optionalDeps = {
+    'prop-types': '^15.8.1',
+  };
+  for (const [dep, version] of Object.entries(optionalDeps)) {
+    const pattern = new RegExp(`from\\s+['"]${dep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`);
+    if (pattern.test(code)) {
+      pkg.dependencies = pkg.dependencies || {};
+      pkg.dependencies[dep] = version;
+    }
+  }
+  files[pkgKey] = JSON.stringify(pkg, null, 2);
+}
+
 /**
  * Merge AI solution with canonical Vite scaffold so builds match preview.
  * @param {Record<string, string>} solution
@@ -92,6 +119,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     if (typeof content !== 'string') continue;
     files[rel.replace(/\\/g, '/')] = content;
   }
+
+  augmentPackageJsonForImports(files);
 
   return files;
 }
