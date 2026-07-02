@@ -1,14 +1,15 @@
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { mkdir, writeFile, rm, symlink } from 'fs/promises';
+import { mkdir, writeFile, rm } from 'fs/promises';
 import { join, dirname } from 'path';
-import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { buildRunnableSolutionProject } from './solutionStaticFix.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
+const VALIDATE_ROOT = join(PREVIEW_WORKSPACE, '.validate');
+const PREVIEW_NODE_MODULES = join(PREVIEW_WORKSPACE, 'node_modules');
 const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
 
 export function isSolutionValidationEnabled() {
@@ -36,20 +37,17 @@ async function writeProjectTree(rootDir, files) {
   }
 }
 
-async function linkNodeModules(targetDir) {
-  const src = join(PREVIEW_WORKSPACE, 'node_modules');
-  const dest = join(targetDir, 'node_modules');
-  if (!existsSync(src)) return false;
-  try {
-    await symlink(src, dest, 'junction');
-    return true;
-  } catch {
-    try {
-      await symlink(src, dest, 'dir');
-      return true;
-    } catch {
-      return false;
-    }
+function resolveViteBin() {
+  const viteJs = join(PREVIEW_NODE_MODULES, 'vite', 'bin', 'vite.js');
+  if (existsSync(viteJs)) return viteJs;
+  return null;
+}
+
+function assertPreviewDeps() {
+  if (!existsSync(PREVIEW_NODE_MODULES) || !resolveViteBin()) {
+    throw new Error(
+      'preview-workspace dependencies are missing. Run once from the repo root: npm install --prefix preview-workspace',
+    );
   }
 }
 
@@ -83,6 +81,8 @@ function parseBuildErrors(log) {
 
 /**
  * Run Vite production build on merged solution + scaffold.
+ * Uses preview-workspace/.validate/<id> so Node resolves deps from preview-workspace/node_modules
+ * (avoids temp-dir symlinks and npm install on Windows/OneDrive).
  * @param {Record<string, string>} solution
  * @returns {Promise<{ ok: boolean; errors: string[]; buildLog: string }>}
  */
@@ -92,32 +92,18 @@ export async function validateSolutionBuild(solution) {
   }
 
   const projectFiles = buildRunnableSolutionProject(solution);
-  const workDir = join(tmpdir(), `rqg-val-${randomUUID()}`);
+  const workDir = join(VALIDATE_ROOT, randomUUID());
   const timeout = resolveValidateTimeoutMs();
 
   try {
+    assertPreviewDeps();
+    await mkdir(VALIDATE_ROOT, { recursive: true });
     await writeProjectTree(workDir, projectFiles);
-    const linked = await linkNodeModules(workDir);
 
-    if (!linked) {
-      try {
-        execSync('npm install --prefer-offline --no-audit --no-fund', {
-          cwd: workDir,
-          stdio: 'pipe',
-          shell: true,
-          timeout,
-        });
-      } catch (installErr) {
-        const detail = installErr.stderr?.toString?.() || installErr.message || String(installErr);
-        throw new Error(
-          `npm install failed during solution validation. Run once: npm install --prefix preview-workspace\n${detail.slice(0, 800)}`,
-        );
-      }
-    }
-
+    const viteBin = resolveViteBin();
     let buildLog = '';
     try {
-      buildLog = execSync('npx vite build', {
+      buildLog = execSync(`node "${viteBin}" build`, {
         cwd: workDir,
         stdio: 'pipe',
         shell: true,

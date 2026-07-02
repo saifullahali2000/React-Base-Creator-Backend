@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PREVIEW_WORKSPACE = join(__dirname, '../../preview-workspace');
 
-/** Install preview-workspace deps once so Vite validation/preview can symlink node_modules. */
+/** Install preview-workspace deps once so Vite validation/preview can reuse node_modules. */
 export function ensurePreviewWorkspaceDeps() {
   if (process.env.VERCEL === '1' && process.env.VERCEL_ENV) return;
   const nodeModules = join(PREVIEW_WORKSPACE, 'node_modules');
