@@ -56,6 +56,13 @@ export async function ensurePreviewRunning() {
   if (IS_VERCEL) return;
   if (serverReady && viteProcess && !viteProcess.killed) return;
 
+  const packageJson = join(PREVIEW_WORKSPACE, 'package.json');
+  if (!existsSync(packageJson)) {
+    throw new Error(
+      `preview-workspace is invalid (missing package.json at ${PREVIEW_WORKSPACE}). Run: npm install --prefix preview-workspace`,
+    );
+  }
+
   const nodeModules = join(PREVIEW_WORKSPACE, 'node_modules');
   if (!existsSync(nodeModules)) {
     console.log('[preview] Installing workspace deps (first run)...');

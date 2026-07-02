@@ -378,6 +378,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/preview/status', async (_req, res) => {
+  const previewUrl = getClientPreviewUrl();
+  if (!previewUrl) {
+    return res.json({ running: false, url: '', reason: 'preview_disabled' });
+  }
+  try {
+    const probe = await fetch(previewUrl, { signal: AbortSignal.timeout(4000) });
+    res.json({ running: probe.ok, url: previewUrl });
+  } catch {
+    res.json({ running: false, url: previewUrl, reason: 'unreachable' });
+  }
+});
+
 app.post('/api/estimate-tokens', (req, res) => {
   try {
     const body = req.body ?? {};

@@ -7,6 +7,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** `backend/` directory (monorepo subfolder or standalone API repo root). */
 export const BACKEND_ROOT = join(__dirname, '..');
 
+function isPreviewWorkspace(dir) {
+  return Boolean(dir) && existsSync(join(dir, 'package.json'));
+}
+
 function firstExisting(candidates, fallback) {
   for (const p of candidates) {
     if (p && existsSync(p)) return p;
@@ -14,13 +18,17 @@ function firstExisting(candidates, fallback) {
   return fallback ?? candidates[0];
 }
 
-/** Vite preview + validation workspace. */
+/** Vite preview + validation workspace (must include package.json). */
 export function resolvePreviewWorkspace() {
-  return firstExisting([
+  const candidates = [
     join(process.cwd(), 'preview-workspace'),
     join(BACKEND_ROOT, 'preview-workspace'),
     join(BACKEND_ROOT, '..', 'preview-workspace'),
-  ]);
+  ];
+  for (const p of candidates) {
+    if (isPreviewWorkspace(p)) return p;
+  }
+  return candidates[candidates.length - 1];
 }
 
 /** Sample_Folder root (portal templates). */
