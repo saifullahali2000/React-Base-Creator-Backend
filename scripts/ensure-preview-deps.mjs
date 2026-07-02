@@ -1,10 +1,7 @@
 import { existsSync } from 'fs';
 import { execSync } from 'child_process';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PREVIEW_WORKSPACE = join(__dirname, '../../preview-workspace');
+import { join } from 'path';
+import { PREVIEW_WORKSPACE } from '../src/paths.js';
 
 /** Install preview-workspace deps once so Vite validation/preview can reuse node_modules. */
 export function ensurePreviewWorkspaceDeps() {

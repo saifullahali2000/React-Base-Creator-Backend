@@ -1,17 +1,11 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, relative } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-/** Repo root (React Base Creator), from backend/src/services */
-const REPO_ROOT = join(__dirname, '../../..');
+import { SAMPLE_FOLDER_ROOT } from '../paths.js';
 
 function resolveSampleSubdir(folderName) {
   const candidates = [
-    join(REPO_ROOT, 'Sample_Folder', folderName),
+    join(SAMPLE_FOLDER_ROOT, folderName),
     join(process.cwd(), 'Sample_Folder', folderName),
-    join(__dirname, '../../../Sample_Folder', folderName),
   ];
   for (const p of candidates) {
     if (existsSync(p)) return p;

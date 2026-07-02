@@ -3,11 +3,8 @@ import { existsSync } from 'fs';
 import { mkdir, writeFile, rm } from 'fs/promises';
 import { join, dirname } from 'path';
 import { randomUUID } from 'crypto';
-import { fileURLToPath } from 'url';
+import { PREVIEW_WORKSPACE } from '../paths.js';
 import { buildRunnableSolutionProject } from './solutionStaticFix.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
 const VALIDATE_ROOT = join(PREVIEW_WORKSPACE, '.validate');
 const PREVIEW_NODE_MODULES = join(PREVIEW_WORKSPACE, 'node_modules');
 const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);

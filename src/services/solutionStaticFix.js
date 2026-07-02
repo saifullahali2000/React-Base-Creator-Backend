@@ -1,10 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname, normalize } from 'path';
-import { fileURLToPath } from 'url';
+import { PREVIEW_WORKSPACE } from '../paths.js';
 import { SAMPLE_SOLUTION_DIR } from './sampleTemplateMerge.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
 
 const SCAFFOLD_REL = [
   'package.json',

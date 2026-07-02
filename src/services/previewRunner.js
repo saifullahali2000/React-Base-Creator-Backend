@@ -3,12 +3,12 @@ import { existsSync } from 'fs';
 import { writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { PREVIEW_WORKSPACE } from '../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const PREVIEW_PORT = 4000;
 
 const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
-const PREVIEW_WORKSPACE = join(__dirname, '../../../preview-workspace');
 
 let viteProcess = null;
 let serverReady = false;

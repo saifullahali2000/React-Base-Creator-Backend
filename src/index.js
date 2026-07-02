@@ -1,10 +1,12 @@
 import app from './app.js';
 import { attachPreviewProxy } from './previewProxy.js';
+import { logDeployAssetStatus } from './paths.js';
 import { ensurePreviewWorkspaceDeps } from '../scripts/ensure-preview-deps.mjs';
 
 const IS_VERCEL = process.env.VERCEL === '1' && Boolean(process.env.VERCEL_ENV);
 
 if (!IS_VERCEL) {
+  logDeployAssetStatus();
   ensurePreviewWorkspaceDeps();
   attachPreviewProxy(app);
 }
