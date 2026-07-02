@@ -378,16 +378,36 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+async function probePreviewUrl(previewUrl, timeoutMs = 5000) {
+  try {
+    const probe = await fetch(previewUrl, { signal: AbortSignal.timeout(timeoutMs) });
+    return probe.ok;
+  } catch {
+    return false;
+  }
+}
+
 app.get('/api/preview/status', async (_req, res) => {
   const previewUrl = getClientPreviewUrl();
   if (!previewUrl) {
     return res.json({ running: false, url: '', reason: 'preview_disabled' });
   }
+  const running = await probePreviewUrl(previewUrl, 5000);
+  res.json({ running, url: previewUrl, ...(running ? {} : { reason: 'unreachable' }) });
+});
+
+/** Start Vite preview if idle (e.g. after page refresh). Poll this before falling back to Sandpack. */
+app.post('/api/preview/ensure', async (_req, res) => {
+  const previewUrl = getClientPreviewUrl();
+  if (!previewUrl || IS_VERCEL) {
+    return res.json({ running: false, url: previewUrl || '', reason: 'preview_disabled' });
+  }
   try {
-    const probe = await fetch(previewUrl, { signal: AbortSignal.timeout(4000) });
-    res.json({ running: probe.ok, url: previewUrl });
-  } catch {
-    res.json({ running: false, url: previewUrl, reason: 'unreachable' });
+    await ensurePreviewRunning();
+    const running = await probePreviewUrl(previewUrl, 10000);
+    res.json({ running, url: previewUrl, ...(running ? {} : { reason: 'starting' }) });
+  } catch (err) {
+    res.status(500).json({ running: false, url: previewUrl, error: err.message });
   }
 });
 
