@@ -1,194 +1,227 @@
-## Newspaper E-commerce
+## Transaction Manager Application
 
-Build a **Newspaper E-commerce** application using React that displays a collection of newspapers and allows users to search, view details, and add items to a shopping cart.
+Build a complete, responsive transaction management system with user authentication, data fetching, filtering, and sorting capabilities.
 
-### Demo Video
+### Project Overview
 
-<div style="text-align: center; margin: 24px 0;">
-  <video style="max-width:100%; box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.12);" loop="true" autoplay="autoplay" controls="controls" muted>
-    <source src="https://assets.ccbp.in/frontend/content/react-js/placeholder-demo-video.mp4" type="video/mp4">
-  </video>
-</div>
+Create a modern web application that allows users to:
 
-### Design Files
+- Log in securely using the provided authentication API
+- View a list of transactions fetched dynamically from the API
+- Filter transactions by customer name and category
+- Sort transactions by date (newest/oldest first)
+- View transaction statistics (total count, total amount, completed count, pending count)
+- Navigate between login and transactions pages
+- Logout functionality
 
-No design files are provided. Create a modern, professional, and responsive UI following contemporary design standards with proper spacing, typography, color scheme, and layout hierarchy.
+### Technical Requirements
 
-### Setup Instructions
+**Stack:**
+- React 19
+- react-router-dom v7
+- js-cookie v3 for JWT token management
+- Fetch API for HTTP requests
 
-- The project uses **React 19**, **react-router-dom v7**, and **js-cookie v3**.
-- All necessary dependencies are pre-configured.
-- Focus on implementing the application logic and user interface.
+**Architecture:**
+- Component-based structure with reusable components
+- Context API for authentication state management
+- Separate API layer for authentication and transactions
+- Protected routes for authenticated pages
+- Responsive design for mobile and desktop
 
-### Completion Instructions
+### API Integration
 
-#### Functionality
+#### Authentication API
 
-Implement the following features:
+**Endpoint:** `https://mi767o4rag.execute-api.eu-north-1.amazonaws.com/api/auth/signin`
 
-**Newspaper Display**
+**Method:** POST
 
-- Display all 10 newspapers from the provided dataset on initial load.
-- Each newspaper card should show:
-  - **Title**
-  - **Author**
-  - **Published Date** (formatted)
-  - **Category**
-  - **Image**
-  - **"Add to Cart" button**
-
-**Search Functionality**
-
-- Provide a search input field that filters newspapers by **title**.
-- Searching should be case-insensitive.
-- If no newspapers match the search query, display: **"No newspapers found matching your search."**
-- Clearing the search input should restore the full list of newspapers.
-
-**Add to Cart**
-
-- Clicking the **"Add to Cart"** button should:
-  - Add the newspaper's **title** and **author** to the cart.
-  - Change the button text to **"Added to Cart"**.
-  - Prevent duplicate additions (clicking "Added to Cart" again should have no effect).
-- The cart section should be displayed at the **bottom of the page** (visible after scrolling).
-- The cart should display:
-  - The **total count** of items.
-  - Each cart item showing the newspaper **title** and **author**.
-
-**State Management**
-
-- **Do NOT use React Context API**.
-- Manage state using component-level `useState` and pass data via props.
-
-#### Data
-
-Use the following newspaper articles array in your application:
-
-```javascript
-const articles = [
-  {
-    id: '1',
-    title: 'Global Leaders Convene for Historic Climate Summit in Geneva',
-    author: 'Priya Mehta',
-    publishedDate: '2026-04-08',
-    category: 'World',
-    imageUrl: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&q=80',
-  },
-  {
-    id: '2',
-    title: "India's Tech Startups See Record $18 Billion Investment in Q1 2026",
-    author: 'Arjun Sharma',
-    publishedDate: '2026-04-07',
-    category: 'Business',
-    imageUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80',
-  },
-  {
-    id: '3',
-    title: 'Scientists Discover New Deep-Sea Species Off Coast of Andaman Islands',
-    author: 'Ravi Krishnamurthy',
-    publishedDate: '2026-04-06',
-    category: 'Science',
-    imageUrl: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=800&q=80',
-  },
-  {
-    id: '4',
-    title: 'Mumbai Metro Line 9 Set to Open Ahead of Schedule This June',
-    author: 'Sneha Patil',
-    publishedDate: '2026-04-05',
-    category: 'City',
-    imageUrl: 'https://images.unsplash.com/photo-1581262208435-41726149a759?w=800&q=80',
-  },
-  {
-    id: '5',
-    title: 'India Wins Test Series Against Australia 3–1 in Historic Comeback',
-    author: 'Kiran Bose',
-    publishedDate: '2026-04-04',
-    category: 'Sports',
-    imageUrl: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&q=80',
-  },
-  {
-    id: '6',
-    title: 'New AI Model Outperforms Doctors in Early Cancer Detection Study',
-    author: 'Dr. Ananya Iyer',
-    publishedDate: '2026-04-03',
-    category: 'Health',
-    imageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80',
-  },
-  {
-    id: '7',
-    title: 'Budget 2026: Middle-Class Tax Relief and Green Energy Subsidies Headline Proposals',
-    author: 'Meghna Rao',
-    publishedDate: '2026-04-02',
-    category: 'Economy',
-    imageUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80',
-  },
-  {
-    id: '8',
-    title: "Cannes 2026: Indian Films Dominate with Three Official Selections",
-    author: 'Tara Srinivasan',
-    publishedDate: '2026-04-01',
-    category: 'Culture',
-    imageUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80',
-  },
-  {
-    id: '9',
-    title: 'NATO Expands Eastern Flank with New Rapid-Response Brigade',
-    author: 'Aleksandra Nowak',
-    publishedDate: '2026-03-31',
-    category: 'World',
-    imageUrl: 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&q=80',
-  },
-  {
-    id: '10',
-    title: 'South China Sea Tensions Ease as ASEAN Brokered Talks Resume',
-    author: 'Lin Mei Shan',
-    publishedDate: '2026-03-29',
-    category: 'World',
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
-  },
-];
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
 ```
 
-#### Components Structure
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "jwttoken": "<jwt_token_string>",
+    "user": {
+      "id": 1,
+      "email": "admin@example.com",
+      "name": "Admin User",
+      "role": "admin"
+    }
+  }
+}
+```
 
-Create the following component structure:
+**Error Response (401):**
+```json
+{
+  "statusCode": 401,
+  "success": false,
+  "message": "Invalid credentials"
+}
+```
 
-- **App** (main component managing state)
-  - **NewspaperCard** (reusable component for each newspaper)
-  - **Cart** (displays cart items at the bottom)
+**Implementation Notes:**
+- Store the JWT token in a cookie named `jwt_token` using js-cookie
+- Store user information in localStorage or context
+- Redirect to transactions page on successful login
+- Display appropriate error messages for failed login attempts
 
-#### Important Notes
+#### Transactions API
 
-- Use **functional components** and **React Hooks**.
-- All images should render correctly from the provided URLs.
-- The cart must remain fixed or positioned at the bottom of the page, visible after scrolling.
-- Button states ("Add to Cart" vs "Added to Cart") must update immediately on user interaction.
-- Ensure the application is responsive and works well on both desktop and mobile devices.
+**Endpoint:** `https://mi767o4rag.execute-api.eu-north-1.amazonaws.com/api/transactions`
 
-### Additional Test-Critical Requirements
+**Method:** GET
 
-- The search input must have a placeholder text containing "Search by title".
-- When no newspapers match a search, the exact text **"No newspapers found matching your search."** must be displayed.
-- The cart title must display the count in the format: **"Shopping Cart (n)"** where n is the number of items.
-- All "Add to Cart" buttons must have the exact text **"Add to Cart"** initially.
-- After adding to cart, the button text must change to exactly **"Added to Cart"**.
-- Author names must be prefixed with "By" in the newspaper cards and cart items.
-- Published dates should be formatted using `toLocaleDateString` for consistent display.
+**Request Headers:**
+```
+Authorization: <jwt_token_value>
+```
 
-### Test Contract
+**Note:** Send the raw JWT token value without a "Bearer" prefix.
 
-<details>
-<summary>Click to view</summary>
+**Query Parameters (all optional):**
 
-- The page should render all 10 newspapers with their titles, authors, published dates, and categories on initial load
-- When a user types "Climate" in the search input, the page should display only newspapers with titles containing "Climate"
-- When a user searches for "xyz123nonexistent", the page should display "No newspapers found matching your search."
-- When the search input is cleared, the page should display all newspapers again
-- When the "Add to Cart" button is clicked for a newspaper, that newspaper should be added to the cart section
-- When the "Add to Cart" button is clicked for a newspaper, the button text should change to "Added to Cart"
-- When the "Added to Cart" button is clicked again, the newspaper should not be added to the cart a second time
-- The cart section should display the title and author of each newspaper added to the cart
-- When multiple "Add to Cart" buttons are clicked, all selected newspapers should appear in the cart section
-- The cart section should be rendered at the bottom of the page and display the total number of items in the cart
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Filter by customer name (case-insensitive substring match) |
+| `category` | string | Filter by category (exact match) |
+| `sort` | string | `date_desc` for Newest First, `date_asc` for Oldest First |
 
-</details>
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": "TXN-001",
+        "customer": "Alice Johnson",
+        "date": "2024-01-15",
+        "category": "Electronics",
+        "amount": "250.00",
+        "status": "Completed"
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Failed to load transactions."
+}
+```
+
+**Implementation Notes:**
+- Fetch transactions on component mount and when filters change
+- Handle loading, success, and error states
+- Display appropriate UI for each state
+- Calculate statistics dynamically from the response data
+
+### Feature Requirements
+
+#### 1. Authentication
+- Login page with email and password fields
+- Form validation (email format, required fields)
+- Display loading state during login
+- Show error messages for failed login attempts
+- Store JWT token in cookie and user data in localStorage
+- Protected routes that redirect to login if not authenticated
+- Logout functionality that clears token and user data
+
+#### 2. Transactions List
+- Fetch and display all transactions from the API
+- Show transaction details: ID, customer name, date, category, amount, status
+- Display statistics calculated from API data:
+  - Total number of transactions
+  - Total amount (sum of all transaction amounts)
+  - Number of completed transactions
+  - Number of pending transactions
+- Responsive table layout
+- Handle empty state when no transactions match filters
+
+#### 3. Filtering and Sorting
+- Search by customer name (triggers API call with `name` parameter)
+- Filter by category dropdown (triggers API call with `category` parameter)
+- Sort by date (newest/oldest first, triggers API call with `sort` parameter)
+- Update results dynamically when filters change
+
+#### 4. UI/UX Requirements
+- Modern, clean, and professional design
+- Responsive layout (mobile, tablet, desktop)
+- Loading indicators for async operations
+- Error messages with retry option
+- Status badges with appropriate colors (Completed: green, Pending: yellow, Failed: red)
+- Smooth transitions and hover effects
+- Accessible forms and buttons
+
+### Component Structure
+
+```
+src/
+├── App.jsx                          # Main app with routing
+├── App.css                          # App-level styles
+├── index.css                        # Global styles and CSS variables
+├── components/
+│   ├── Login/
+│   │   ├── index.jsx               # Login component
+│   │   └── index.css               # Login styles
+│   ├── Transactions/
+│   │   ├── index.jsx               # Transactions list component
+│   │   └── index.css               # Transactions styles
+│   ├── Header/
+│   │   ├── index.jsx               # Header with logout
+│   │   └── index.css               # Header styles
+│   └── ProtectedRoute/
+│       └── index.jsx                # Route protection wrapper
+├── context/
+│   └── AuthContext.jsx              # Authentication context
+└── api/
+    ├── auth.js                      # Authentication API calls
+    └── transactions.js              # Transactions API calls
+```
+
+### Completion Criteria
+
+1. User can log in with valid credentials
+2. Invalid login attempts show appropriate error messages
+3. Authenticated users are redirected to transactions page
+4. Unauthenticated users are redirected to login page
+5. Transactions are fetched from the API and displayed in a table
+6. Statistics are calculated dynamically from API data
+7. Search, filter, and sort functionality work correctly and trigger API calls
+8. All loading and error states are handled gracefully
+9. User can log out and is redirected to login page
+10. Application is fully responsive across devices
+11. Code follows clean code practices with proper separation of concerns
+12. No hardcoded data for transactions or statistics
+
+### Testing Your Application
+
+Before submitting, verify:
+
+- Login works with valid credentials
+- Protected routes redirect to login when not authenticated
+- Transactions load correctly after login
+- Search, filter, and sort update the transaction list via API calls
+- Statistics update based on filtered results
+- Logout clears authentication and redirects to login
+- Application is responsive on mobile and desktop
+- All error states display helpful messages
+- Loading states show appropriate indicators
+
+Good luck building your Transaction Manager application!

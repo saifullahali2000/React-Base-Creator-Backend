@@ -1,3 +1,21 @@
+export const UI_DESIGN_STANDARDS = `UI & DESIGN (mandatory — production-grade, company-standard; NOT demo/wireframe quality):
+- Visual bar: match NxtWave portal reference quality (Sample_Folder/Ecommerce_Solution) — polished SaaS / e-commerce UI. Never ship a bare, ugly, or "minimum CSS" layout.
+- FORBIDDEN: default browser-only styling; empty or near-empty CSS files; inline style={{...}} as the main styling approach; one-line rules like "padding: 10px" only; unstyled <button>/<input>; plain white pages with unstyled text; missing :hover/:focus states; no responsive rules.
+- REQUIRED src/index.css baseline: *, *::before, *::after { box-sizing: border-box }; body font-family Inter, system-ui, sans-serif; color #1a1a1a; background #fff; -webkit-font-smoothing antialiased; button { font-family: inherit }.
+- REQUIRED: every component folder MUST have a substantial index.css (primary pages often 80–200+ lines). Use BEM-style classes (e.g. login-page, login-form__title, ec-header__inner) — never rely on bare tag selectors alone.
+- Design tokens (use consistently unless screenshots override):
+  • Primary #1a1a1a | Surfaces #fff, #fafafa | Borders #e5e5e5, #eee
+  • Muted text #888, #999 | Error #e11d48 on #fff1f2 background with left border accent
+  • Headings 24–28px font-weight 700 | Labels 11px uppercase letter-spacing 0.6px font-weight 700
+  • Body 13–15px line-height 1.5–1.7 | Spacing scale 4/8/12/16/20/24/32/48/60px
+  • Border-radius 3–6px on inputs/buttons/cards | Subtle shadows on cards: 0 1px 3px rgba(0,0,0,0.08)
+- Layout patterns: max-width ~1280px centered containers; sticky headers with border-bottom; split login (brand panel + form panel); product/data card grids; styled tables with header row contrast; proper nav with icon buttons and badges.
+- Interactive polish: ALL buttons, links, inputs need :hover, :focus-visible (ring/shadow), :disabled (opacity + cursor), transition 0.15–0.2s on color/background/transform.
+- UX states (styled, not alert-only): loading (spinner or disabled button), empty lists ("No items yet" with muted text), form errors (styled banner), success feedback where relevant.
+- Responsive (required): @media (max-width: 768px) and (max-width: 480px) — stack columns, hide secondary panels, 44px min touch targets, no horizontal overflow.
+- If screenshots attached: match layout, colors, typography, spacing exactly.
+- If NO screenshots: infer a cohesive professional theme from the app domain (e-commerce → product cards + header; dashboard → sidebar + stat cards; auth → split login layout).`;
+
 export const SYSTEM_PROMPT = `You are a React question generator for NxtWave's edtech platform. Generate complete React IDE coding questions.
 
 Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text:
@@ -89,11 +107,7 @@ COMPONENT RULES:
 - When the user supplies one or more backend base URLs and/or endpoint descriptions, implement the src/api/ layer with the correct origin per endpoint (e.g. auth service vs data service), match paths/methods/bodies exactly as described, and document the same contract in ideCoding.question_text (API section). Use MSW in tests to mock those endpoints.
 
 UI & DESIGN (mandatory):
-- If design screenshots/images are attached to the request, match layout, spacing, colors, typography, and component structure as closely as possible.
-- If NO images are attached, still deliver a modern, professional company-standard UI inferred only from the functionality, API, and requirements — never a plain unstyled page, default browser form, or wireframe-only layout.
-- Every view needs proper CSS (each component index.css plus src/index.css and src/App.css): consistent spacing scale, typography, color palette, borders/shadows, buttons, forms, tables/cards, and clear visual hierarchy with accessible contrast.
-- Responsive layout is required: polished on desktop and fully usable on mobile — stack columns, avoid horizontal overflow, touch-friendly controls — using flex/grid and CSS media queries (design for roughly 375px and 1280px widths).
-- Include sensible UI states where relevant: hover, focus, disabled, loading, empty, and error.
+${UI_DESIGN_STANDARDS}
 
 PREFILLED RULES (strictly enforced):
 - ONLY include in prefilled/solution JSON: application source paths (e.g. src/App.jsx with <h1>Hello World!!</h1> for prefilled, full solution under src/), src/App.css, src/index.css, components, api, context as needed.
@@ -163,10 +177,10 @@ ${functionality.trim()}`;
 
   if (hasScreenshots) {
     text +=
-      '\n\n## UI / design (reference screenshots attached)\nMatch the attached screenshot(s) for layout, visual style, and components. Also ensure responsive CSS so the app works on both mobile and desktop.\n';
+      '\n\n## UI / design (reference screenshots attached)\nMatch the attached screenshot(s) pixel-accurately for layout, colors, typography, and spacing. Also apply full production CSS (per-component index.css, not inline styles) and responsive rules for mobile + desktop.\n';
   } else {
     text +=
-      '\n\n## UI / design (no reference images provided)\nNo design screenshots were uploaded. Based only on the functionality and requirements above, build a modern company-standard interface with complete, polished CSS — professional spacing, typography, and colors — and a responsive layout that works on both mobile and desktop (not a bare or unstyled UI).\n';
+      '\n\n## UI / design (no reference images — company-standard required)\nNo design screenshots were uploaded. You MUST still deliver production-grade UI at NxtWave portal quality (like Sample_Folder/Ecommerce_Solution): substantial CSS in every component (80+ lines for main pages), Inter font, cohesive color palette (#1a1a1a primary), styled forms/buttons/cards/tables, hover/focus/disabled states, loading/empty/error states, and responsive @media rules. NEVER output bare HTML, empty CSS files, or minimal one-line styles.\n';
   }
 
   return text;
@@ -224,9 +238,7 @@ BUILD VALIDATION (critical — backend runs vite build before preview):
 - Solution must compile with Vite and render the main UI without errors.
 
 UI & DESIGN (mandatory):
-- If screenshots are attached, match them closely for layout and visual style.
-- If NO images are attached, infer a modern company-standard UI from the requirements — polished CSS, not a plain unstyled interface.
-- Responsive mobile + desktop layout with proper component CSS (index.css per component, src/index.css, src/App.css).
+${UI_DESIGN_STANDARDS}
 
 COMPONENT RULES:
 - Components: src/components/<Name>/index.jsx + index.css
@@ -271,10 +283,10 @@ ${functionality.trim()}`;
 
   if (hasScreenshots) {
     text +=
-      '\n\n## UI / design (reference screenshots attached)\nMatch the attached screenshot(s). Ensure responsive CSS for mobile and desktop.\n';
+      '\n\n## UI / design (reference screenshots attached)\nMatch the attached screenshot(s) closely. Use full production CSS per component and responsive mobile + desktop layouts.\n';
   } else {
     text +=
-      '\n\n## UI / design (no reference images provided)\nNo design screenshots were uploaded. Build a modern company-standard UI from the requirements with complete CSS and responsive mobile + desktop layouts.\n';
+      '\n\n## UI / design (no reference images — company-standard required)\nBuild production-grade UI at NxtWave portal quality: substantial per-component CSS, professional typography/spacing/colors, interactive states, UX states (loading/empty/error), and responsive breakpoints. No bare or minimal styling.\n';
   }
 
   return text;
