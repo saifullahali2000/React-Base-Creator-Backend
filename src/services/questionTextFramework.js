@@ -97,20 +97,18 @@ Inter, sans-serif
 
 </details>
 
-<details>
-<summary>SVG Icons</summary>
-<br/>
-
-(table or _No custom SVG icon components in this project._)
-
-</details>
-
 > ### _Things to Keep in Mind_
 >
 > - All components you implement should go in the \`src/components\` directory.
 > - Don't change the component folder names as those are the files being imported into the tests.
 
-FORBIDDEN: flat ### sections without <details>; skipping video/Resources; "No design files were provided" without route bullets; Setup with "npm test" or "clone repository".`;
+FORBIDDEN in question_text:
+- Flat ### sections without <details>; skipping video or Resources (Colors + Font-families)
+- Empty or nested empty <details></details> placeholders inside any section
+- SVG Icons or Image URLs sections when the solution does not use them (omit entirely — no "not used" placeholders)
+- "No design files were provided" without route bullets in Design Files
+- Setup with "npm test" or "clone repository"
+- Thin Completion Instructions (must list every feature, label, route, and data shape like the reference README)`;
 
 const VIDEO_BLOCK = `**Refer to the below video.**
 <video width="320" height="240" controls>
@@ -183,6 +181,29 @@ function stripEmptyDetailsTags(text) {
     s = s.replace(/<details>\s*<\/details>/gi, '');
   } while (s !== prev);
   return s;
+}
+
+/** Remove SVG Icons / Image URLs blocks when solution does not use them (LLM may add placeholders). */
+function stripUnusedResourceSubsections(text, solution) {
+  let out = text;
+  const hasIcons = Object.keys(solution || {}).some((p) =>
+    /components\/Icons\/index\.(jsx|tsx|js)$/i.test(p.replace(/\\/g, '/')),
+  );
+  const hasImages = extractImageUrls(solution || {}).length > 0;
+
+  if (!hasIcons) {
+    out = out.replace(
+      /<details>\s*<summary>\s*SVG Icons\s*<\/summary>[\s\S]*?<\/details>\s*/gi,
+      '',
+    );
+  }
+  if (!hasImages) {
+    out = out.replace(
+      /<details>\s*<summary>\s*Image URLs\s*<\/summary>[\s\S]*?<\/details>\s*/gi,
+      '',
+    );
+  }
+  return out;
 }
 
 /**
@@ -388,7 +409,9 @@ function buildResourcesSection(solution) {
 
   const fonts = extractFontsFromSolution(solution);
   let fontsBody = '<details>\n<summary>Font-families</summary>\n\n';
-  fontsBody += '```\n' + fonts + '\n```\n\n</details>\n\n';
+  fontsBody += '```\n' + fonts + '\n```\n\n</details>\n';
+
+  let resources = `### Resources\n\n${colorsBody}${fontsBody}`;
 
   const iconsFile = Object.entries(solution).find(([p]) =>
     /components\/Icons\/index\.(jsx|tsx|js)$/i.test(p.replace(/\\/g, '/')),
@@ -397,26 +420,24 @@ function buildResourcesSection(solution) {
     ? [...iconsFile[1].matchAll(/export\s+(?:const|function)\s+(Icon\w+)/g)].map((m) => m[1])
     : [];
 
-  let iconsBody = '<details>\n<summary>SVG Icons</summary>\n<br/>\n\n';
   if (iconNames.length) {
+    let iconsBody = '<details>\n<summary>SVG Icons</summary>\n<br/>\n\n';
     iconsBody += '| Icon | Usage |\n|------|-------|\n';
     iconsBody += iconNames.map((n) => `| \`${n}\` | Used in UI |\n`).join('');
-  } else {
-    iconsBody += '_No custom SVG icon components in this project._\n';
+    iconsBody += '\n\n</details>\n';
+    resources += `\n${iconsBody}`;
   }
-  iconsBody += '\n\n</details>\n\n';
 
   const images = extractImageUrls(solution);
-  let imagesBody = '<details>\n<summary>Image URLs</summary>\n\n';
   if (images.length) {
+    let imagesBody = '<details>\n<summary>Image URLs</summary>\n\n';
     imagesBody += '| Usage | URL |\n|-------|-----|\n';
     imagesBody += images.map((r) => `| ${r.usage} | ${r.url} |\n`).join('');
-  } else {
-    imagesBody += '_No external image URLs in solution source._\n';
+    imagesBody += '\n\n</details>\n';
+    resources += `\n${imagesBody}`;
   }
-  imagesBody += '\n\n</details>\n';
 
-  return `### Resources\n\n${colorsBody}${fontsBody}${iconsBody}${imagesBody}`;
+  return resources.trimEnd() + '\n';
 }
 
 function wrapDetails(sectionTitle, summary, body) {
@@ -554,6 +575,7 @@ function repairPortalQuestionText(qt, generated) {
     out += `\n\n${FOOTER_BLOCK}`;
   }
 
+  out = stripUnusedResourceSubsections(out, solution);
   return stripEmptyDetailsTags(out).trimEnd() + '\n';
 }
 
@@ -636,7 +658,11 @@ export function normalizePortalQuestionText(generated) {
     FOOTER_BLOCK,
   );
 
-  generated.ideCoding.question_text = stripEmptyDetailsTags(parts.filter((p) => p !== null).join('\n')).trimEnd() + '\n';
+  generated.ideCoding.question_text =
+    stripUnusedResourceSubsections(
+      stripEmptyDetailsTags(parts.filter((p) => p !== null).join('\n')),
+      solution,
+    ).trimEnd() + '\n';
   return generated;
 }
 
