@@ -8,6 +8,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { syncTestCasesFromVitestFiles } from './testCaseSync.js';
+import { enrichQuestionTextResources } from './questionTextFramework.js';
 import { enforceTestEnumConvention } from './testCaseEnum.js';
 
 const IDE_BRIDGE_SCRIPT =
@@ -136,17 +137,6 @@ export function applyPortalPostProcess(generated) {
     }
   }
 
-  if (generated.ideCoding && typeof generated.ideCoding === 'object') {
-    const qt =
-      typeof generated.ideCoding.question_text === 'string' && generated.ideCoding.question_text.trim()
-        ? generated.ideCoding.question_text.trim()
-        : typeof generated.ideCoding.short_text === 'string' && generated.ideCoding.short_text.trim()
-          ? generated.ideCoding.short_text.trim()
-          : 'Question text unavailable.';
-
-    generated.solution['readme.md'] = `${qt}\n`;
-  }
-
   if (generated.tests && typeof generated.tests === 'object') {
     const viteKey = Object.keys(generated.tests).find((k) => k.replace(/\\/g, '/') === 'vite.config.js');
     if (viteKey && typeof generated.tests[viteKey] === 'string') {
@@ -168,6 +158,19 @@ export function applyPortalPostProcess(generated) {
   } else {
     enforceTestEnumConvention(generated);
     syncTestCasesFromVitestFiles(generated);
+  }
+
+  enrichQuestionTextResources(generated);
+
+  if (generated.ideCoding && typeof generated.ideCoding === 'object') {
+    const qt =
+      typeof generated.ideCoding.question_text === 'string' && generated.ideCoding.question_text.trim()
+        ? generated.ideCoding.question_text.trim()
+        : typeof generated.ideCoding.short_text === 'string' && generated.ideCoding.short_text.trim()
+          ? generated.ideCoding.short_text.trim()
+          : 'Question text unavailable.';
+
+    generated.solution['readme.md'] = `${qt}\n`;
   }
 
   return generated;

@@ -1,3 +1,5 @@
+import { QUESTION_TEXT_FRAMEWORK } from './questionTextFramework.js';
+
 export const UI_DESIGN_STANDARDS = `UI & DESIGN (mandatory — production-grade, company-standard; NOT demo/wireframe quality):
 - Visual bar: match NxtWave portal reference quality (Sample_Folder/Ecommerce_Solution) — polished SaaS / e-commerce UI. Never ship a bare, ugly, or "minimum CSS" layout.
 - FORBIDDEN: default browser-only styling; empty or near-empty CSS files; inline style={{...}} as the main styling approach; one-line rules like "padding: 10px" only; unstyled <button>/<input>; plain white pages with unstyled text; missing :hover/:focus states; no responsive rules.
@@ -119,15 +121,7 @@ TESTS JSON RULES:
 
 SIZE (critical): The entire reply is one JSON object. Keep solution, tests, and ideCoding.question_text as compact as possible—minimal comments, no filler prose, no duplicate explanations—so the JSON stays valid and complete.
 
-QUESTION TEXT must be full markdown including:
-- Project description with demo video placeholder
-- Design Files section
-- Setup Instructions section
-- Completion Instructions with all required functionality details
-- API docs (endpoints, request/response format) if applicable
-- Important Note section with test-critical implementation details
-- Additional Test-Critical Requirements section
-- Test Contract section: a <details> block listing every test display_text as a markdown bullet (same wording as test_cases and it() titles), one bullet per test in order`;
+${QUESTION_TEXT_FRAMEWORK}`;
 
 export function buildUserRequestText({
   testCaseCount,
@@ -250,6 +244,8 @@ COMPONENT RULES:
 
 SCAFFOLD (backend-enforced):
 - DO NOT put in "solution" JSON: .nvmrc, .prettierrc, eslint.config.js, index.html, vite.config.js, src/main.jsx, src/setupTests.js, package.json, .gitignore, public/vite.svg — the backend merges these from Sample_Folder/Ecommerce_Solution.
+
+${QUESTION_TEXT_FRAMEWORK}
 
 SIZE: Keep solution and question_text compact so the JSON completes.`;
 
