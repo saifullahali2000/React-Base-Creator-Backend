@@ -8,7 +8,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { syncTestCasesFromVitestFiles } from './testCaseSync.js';
-import { enrichQuestionTextResources } from './questionTextFramework.js';
+import { normalizePortalQuestionText } from './questionTextFramework.js';
 import { enforceTestEnumConvention } from './testCaseEnum.js';
 
 const IDE_BRIDGE_SCRIPT =
@@ -160,7 +160,7 @@ export function applyPortalPostProcess(generated) {
     syncTestCasesFromVitestFiles(generated);
   }
 
-  enrichQuestionTextResources(generated);
+  normalizePortalQuestionText(generated);
 
   if (generated.ideCoding && typeof generated.ideCoding === 'object') {
     const qt =

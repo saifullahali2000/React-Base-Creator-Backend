@@ -48,7 +48,7 @@ In JSX and JavaScript embedded in those JSON strings, prefer single-quoted JS st
     "ide_session_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
     "short_text": "Project Title",
     "question_key": 0,
-    "question_text": "## Title\\n\\nFull markdown with setup, functionality, API docs...",
+    "question_text": "## Brand — Application Type\\n\\n(Full portal README markdown: intro, video block, Design/Setup/Completion/Important/Additional sections in <details>, Test Contract, Resources with color swatches — follow QUESTION TEXT rules below)",
     "question_type": "IDE_BASED_CODING",
     "content_type": "MARKDOWN",
     "toughness": "EASY",
@@ -119,7 +119,7 @@ PREFILLED RULES (strictly enforced):
 TESTS JSON RULES:
 - In "tests", ONLY include generated Vitest files: paths matching src/__tests__/**/*.jsx (your test code). Do NOT put package.json, vite.config.js, setupTests, or other scaffold in "tests" — backend merges those from Sample_Folder/Ecommerce_Tests so the portal layout matches production.
 
-SIZE (critical): The entire reply is one JSON object. Keep solution, tests, and ideCoding.question_text as compact as possible—minimal comments, no filler prose, no duplicate explanations—so the JSON stays valid and complete.
+SIZE (critical): The entire reply is one JSON object. Keep solution and tests compact—but ideCoding.question_text MUST still include the full portal README skeleton (all <details> sections, video, Resources with color swatches). Backend normalizes structure, but you must still generate complete completion instructions and test-critical details inside the collapsibles.
 
 ${QUESTION_TEXT_FRAMEWORK}`;
 
