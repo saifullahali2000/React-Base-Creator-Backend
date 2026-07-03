@@ -143,29 +143,75 @@ function escapeRegExp(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Remove all <details>/<summary> wrappers; keep inner markdown. */
+function stripAllDetailsWrappers(body) {
+  let s = (body || '').trim();
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/<details>\s*<summary>[\s\S]*?<\/summary>\s*(?:<br\s*\/?>)?\s*/gi, '');
+    s = s.replace(/<\/details>/gi, '');
+    s = s.replace(/<details>\s*<\/details>/gi, '');
+  } while (s !== prev);
+  return s.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 /** @param {string} body */
-function unwrapDetails(body) {
-  const trimmed = body.trim();
-  const m = trimmed.match(
-    /^<details>\s*<summary>[\s\S]*?<\/summary>\s*(?:<br\s*\/?>)?\s*([\s\S]*?)<\/details>\s*$/i,
-  );
-  return m ? m[1].trim() : trimmed;
+function isEffectivelyEmpty(body) {
+  const s = stripAllDetailsWrappers(body);
+  if (!s) return true;
+  if (/^[_*]*\s*(see|no |n\/a)/i.test(s) && s.length < 80) return false;
+  return !s.replace(/[_*`#\s-]/g, '').length;
+}
+
+/** Section has real instructions (not just boilerplate or empty details). */
+function isSubstantiveSection(body) {
+  const s = stripAllDetailsWrappers(body);
+  const stripped = s
+    .replace(/\*\*The following instructions are required for the tests to pass\*\*/gi, '')
+    .replace(/The app must have the following functionalities:\s*/gi, '')
+    .trim();
+  if (!stripped) return false;
+  return /^(#{1,4}\s|-\s|\d+\.\s)/m.test(stripped) || stripped.length > 60;
+}
+
+function stripEmptyDetailsTags(text) {
+  let s = text;
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/<details>\s*<\/details>/gi, '');
+  } while (s !== prev);
+  return s;
 }
 
 /**
  * @param {string} text
  * @param {string[]} headingVariants
  */
-function extractSection(text, ...headingVariants) {
+function extractSectionRaw(text, ...headingVariants) {
   for (const heading of headingVariants) {
     const re = new RegExp(
       `^###\\s+${escapeRegExp(heading)}\\s*$\\s*([\\s\\S]*?)(?=^###\\s+|^>\\s+###|$)`,
       'im',
     );
     const m = text.match(re);
-    if (m) return unwrapDetails(m[1].trim());
+    if (m) return m[1].trim();
   }
   return '';
+}
+
+/** @param {string} raw @param {string} [fallback] */
+function prepareSectionBody(raw, fallback = '') {
+  const body = stripAllDetailsWrappers(raw);
+  if (!isEffectivelyEmpty(body)) return body;
+  const fb = stripAllDetailsWrappers(fallback);
+  return isEffectivelyEmpty(fb) ? '' : fb;
+}
+
+/** @deprecated single-layer unwrap — prefer stripAllDetailsWrappers */
+function unwrapDetails(body) {
+  return stripAllDetailsWrappers(body);
 }
 
 /** @param {string} text */
@@ -274,9 +320,9 @@ function extractFontsFromSolution(solution) {
 
   const fonts = [
     ...new Set(
-      [...cssBlob.matchAll(/font-family:\s*([^;}\n]+)/gi)].map((m) =>
-        m[1].trim().replace(/^['"]|['"]$/g, ''),
-      ),
+      [...cssBlob.matchAll(/font-family:\s*([^;}\n]+)/gi)]
+        .map((m) => m[1].trim().replace(/['"]/g, '').trim())
+        .filter((f) => f && !/^inherit$/i.test(f)),
     ),
   ];
   return fonts.length ? fonts.join('\n') : 'Inter, sans-serif';
@@ -284,10 +330,16 @@ function extractFontsFromSolution(solution) {
 
 /** @param {Record<string, string>} solution */
 function extractImageUrls(solution) {
+  const seen = new Set();
   const rows = [];
+
   for (const [path, content] of Object.entries(solution)) {
     if (!/\.(jsx|tsx|js)$/i.test(path)) continue;
-    for (const m of content.matchAll(/(?:imageUrl|src)=['"](https?:\/\/[^'"]+)['"]/g)) {
+    const re = /(?:imageUrl|src)\s*[=:]\s*['"](https?:\/\/[^'"]+)['"]/gi;
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
       rows.push({ usage: path.replace(/\\/g, '/'), url: m[1] });
     }
   }
@@ -368,8 +420,9 @@ function buildResourcesSection(solution) {
 }
 
 function wrapDetails(sectionTitle, summary, body) {
-  const content = body.trim() || '_See completion instructions above._';
-  return `### ${sectionTitle}\n<details>\n<summary>${summary}</summary>\n<br/>\n\n${content}\n\n</details>`;
+  const content = stripAllDetailsWrappers(body);
+  const final = content.trim() || '_Content unavailable — see Test Contract._';
+  return `### ${sectionTitle}\n<details>\n<summary>${summary}</summary>\n<br/>\n\n${final}\n\n</details>`;
 }
 
 /** @param {Array<{ display_text: string }>} testCases */
@@ -380,25 +433,128 @@ function buildTestContractSection(testCases) {
 }
 
 function normalizeDesignFilesContent(raw, solution) {
-  const body = raw.trim();
+  const body = prepareSectionBody(raw);
   if (!body || /no design files/i.test(body)) {
     return inferDesignRoutes(solution);
   }
-  if (/^-\s/m.test(body) && !/^<details>/i.test(body)) return body;
+  if (!/^-\s/m.test(body)) {
+    return inferDesignRoutes(solution);
+  }
   return body;
 }
 
-function normalizeSetupContent(_raw) {
-  return '- Download dependencies by running `npm install`\n- Start up the app using `npm run dev`';
-}
-
 function normalizeImportantNoteContent(raw) {
-  let body = raw.trim();
-  if (!body) return '**The following instructions are required for the tests to pass**\n\n_See Additional Test-Critical Requirements and Test Contract._';
+  let body = prepareSectionBody(raw);
+  if (!body) {
+    return '**The following instructions are required for the tests to pass**\n\n_See Additional Test-Critical Requirements and Test Contract._';
+  }
   if (!/required for the tests to pass/i.test(body)) {
     body = `**The following instructions are required for the tests to pass**\n\n${body}`;
   }
   return body;
+}
+
+/** Flat LLM sections (#### headings) between two ### headings */
+function extractFlatFeatureBlock(text, afterHeading, beforeHeadings) {
+  const before = beforeHeadings.map(escapeRegExp).join('|');
+  const re = new RegExp(
+    `^###\\s+${escapeRegExp(afterHeading)}\\s*$\\s*([\\s\\S]*?)(?=^###\\s+(?:${before})\\b|$)`,
+    'im',
+  );
+  const m = text.match(re);
+  if (!m) return '';
+  return stripAllDetailsWrappers(m[1]);
+}
+
+function isAlreadyPortalFormatted(qt) {
+  return (
+    qt.includes('<video') &&
+    /### Set Up Instructions/i.test(qt) &&
+    /### Resources/i.test(qt) &&
+    /<summary>Colors<\/summary>/i.test(qt)
+  );
+}
+
+/**
+ * Light repair when text already has portal shell but sections are hollow.
+ * @param {string} qt
+ * @param {{ solution?: Record<string, string>; ideCoding?: { test_cases?: Array<{ display_text: string }> } }} generated
+ */
+function repairPortalQuestionText(qt, generated) {
+  const solution = generated.solution || {};
+
+  const replaceSection = (source, title, summary, body) => {
+    const block = wrapDetails(title, summary, body);
+    const re = new RegExp(
+      `^###\\s+${escapeRegExp(title)}\\s*$[\\s\\S]*?(?=^###\\s+|^>\\s+###|$)`,
+      'im',
+    );
+    return re.test(source) ? source.replace(re, block) : source;
+  };
+
+  let out = qt;
+
+  const designBody = prepareSectionBody(
+    extractSectionRaw(qt, 'Design Files'),
+    inferDesignRoutes(solution),
+  );
+  out = replaceSection(
+    out,
+    'Design Files',
+    'Click to view',
+    normalizeDesignFilesContent(designBody, solution),
+  );
+
+  out = replaceSection(out, 'Set Up Instructions', 'Click to view', normalizeSetupContent(''));
+
+  let completionBody = prepareSectionBody(extractSectionRaw(qt, 'Completion Instructions'));
+  if (!isSubstantiveSection(completionBody)) {
+    completionBody = extractFlatFeatureBlock(
+      qt,
+      'Completion Instructions',
+      ['Important Note', 'Important Notes', 'Additional Test-Critical', 'Test Contract', 'Resources'],
+    );
+  }
+  if (!/^The app must have/i.test(completionBody)) {
+    completionBody = `The app must have the following functionalities:\n\n${completionBody}`.trim();
+  }
+  out = replaceSection(out, 'Completion Instructions', 'Functionality to be added', completionBody);
+
+  const importantBody = prepareSectionBody(
+    extractSectionRaw(qt, 'Important Note', 'Important Notes'),
+  );
+  out = replaceSection(
+    out,
+    'Important Note',
+    'Click to view',
+    normalizeImportantNoteContent(importantBody),
+  );
+
+  const additionalBody = prepareSectionBody(
+    extractSectionRaw(qt, 'Additional Test-Critical Requirements'),
+  );
+  out = replaceSection(
+    out,
+    'Additional Test-Critical Requirements',
+    'Click to view',
+    additionalBody || '_See Test Contract for exact assertions._',
+  );
+
+  const contract = buildTestContractSection(generated.ideCoding?.test_cases || []);
+  if (contract) {
+    const contractRe = /^### Test Contract[\s\S]*?(?=^### Resources\b|^> ###|$)/im;
+    out = contractRe.test(out) ? out.replace(contractRe, contract + '\n\n') : `${out}\n\n${contract}`;
+  }
+
+  const resourcesRe = /^### Resources[\s\S]*?(?=^> ###|$)/im;
+  const resources = buildResourcesSection(solution);
+  out = resourcesRe.test(out) ? out.replace(resourcesRe, resources + '\n\n') : `${out}\n\n${resources}`;
+
+  if (!/> ### _Things to Keep in Mind_/i.test(out)) {
+    out += `\n\n${FOOTER_BLOCK}`;
+  }
+
+  return stripEmptyDetailsTags(out).trimEnd() + '\n';
 }
 
 /**
@@ -410,25 +566,39 @@ export function normalizePortalQuestionText(generated) {
 
   const solution = generated.solution || {};
   const qt = generated.ideCoding.question_text;
+
+  if (isAlreadyPortalFormatted(qt)) {
+    generated.ideCoding.question_text = repairPortalQuestionText(qt, generated);
+    return generated;
+  }
+
   const { title, intro } = extractPreamble(qt);
 
-  const designRaw = extractSection(qt, 'Design Files');
-  const setupRaw = extractSection(qt, 'Set Up Instructions', 'Setup Instructions');
-  const completionRaw = extractSection(qt, 'Completion Instructions');
-  const apiRaw = extractSection(qt, 'API Requests & Responses');
-  const importantRaw = extractSection(qt, 'Important Note', 'Important Notes');
-  const additionalRaw = extractSection(qt, 'Additional Test-Critical Requirements');
+  const designRaw = extractSectionRaw(qt, 'Design Files');
+  const setupRaw = extractSectionRaw(qt, 'Set Up Instructions', 'Setup Instructions');
+  let completionRaw = extractSectionRaw(qt, 'Completion Instructions');
+  const apiRaw = extractSectionRaw(qt, 'API Requests & Responses');
+  const importantRaw = extractSectionRaw(qt, 'Important Note', 'Important Notes');
+  const additionalRaw = extractSectionRaw(qt, 'Additional Test-Critical Requirements');
 
-  let completionBody = completionRaw;
-  if (!completionBody) {
-    completionBody = 'The app must have the following functionalities:\n\n';
-    completionBody += qt
-      .replace(/^##\s+.+\n?/m, '')
-      .replace(/^###\s+[\s\S]*/m, '')
-      .trim();
+  if (isEffectivelyEmpty(completionRaw) || !isSubstantiveSection(completionRaw)) {
+    completionRaw = extractFlatFeatureBlock(
+      qt,
+      'Completion Instructions',
+      ['Important Note', 'Important Notes', 'Additional Test-Critical', 'Test Contract', 'Resources'],
+    );
+    if (isEffectivelyEmpty(completionRaw) || !isSubstantiveSection(completionRaw)) {
+      const flat = qt
+        .replace(/^##\s+.+\n?/m, '')
+        .replace(/\n###\s+[\s\S]*/m, '')
+        .trim();
+      if (flat) completionRaw = flat;
+    }
   }
+
+  let completionBody = prepareSectionBody(completionRaw);
   if (!/^The app must have/i.test(completionBody)) {
-    completionBody = `The app must have the following functionalities:\n\n${completionBody}`;
+    completionBody = `The app must have the following functionalities:\n\n${completionBody}`.trim();
   }
 
   const parts = [
@@ -445,7 +615,7 @@ export function normalizePortalQuestionText(generated) {
     wrapDetails('Completion Instructions', 'Functionality to be added', completionBody),
   ];
 
-  if (apiRaw.trim()) {
+  if (prepareSectionBody(apiRaw)) {
     parts.push('', wrapDetails('API Requests & Responses', 'Click to view', apiRaw));
   }
 
@@ -456,7 +626,7 @@ export function normalizePortalQuestionText(generated) {
     wrapDetails(
       'Additional Test-Critical Requirements',
       'Click to view',
-      additionalRaw.trim() || '_See Test Contract for exact assertions._',
+      prepareSectionBody(additionalRaw) || '_See Test Contract for exact assertions._',
     ),
     '',
     buildTestContractSection(generated.ideCoding.test_cases || []),
@@ -466,8 +636,12 @@ export function normalizePortalQuestionText(generated) {
     FOOTER_BLOCK,
   );
 
-  generated.ideCoding.question_text = parts.filter((p) => p !== null).join('\n');
+  generated.ideCoding.question_text = stripEmptyDetailsTags(parts.filter((p) => p !== null).join('\n')).trimEnd() + '\n';
   return generated;
+}
+
+function normalizeSetupContent(_raw) {
+  return '- Download dependencies by running `npm install`\n- Start up the app using `npm run dev`';
 }
 
 /** @deprecated use normalizePortalQuestionText */
