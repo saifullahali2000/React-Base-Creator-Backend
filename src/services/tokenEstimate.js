@@ -3,6 +3,7 @@ import {
   SYSTEM_PROMPT_OPEN_BOOK,
   buildUserRequestText,
   buildOpenBookUserRequestText,
+  getSystemPromptStats,
 } from './generationPrompt.js';
 
 /** Rough input-token estimate (~4 chars/token for English prose/code). */
@@ -69,6 +70,8 @@ export function estimateGenerationInputTokens({
 
   const systemPromptTokens = estimateTextTokens(systemPrompt);
   const userRequestTokens = estimateTextTokens(userRequestText);
+  const promptStats = getSystemPromptStats(isOpenBook ? 'open_book' : 'topin_base');
+  const readmeTemplateTokens = estimateTextTokens(promptStats.readmeBlock);
 
   const frontendFunctionality = estimateTextTokens(functionalityTrimmed);
   const frontendApiBases = estimateTextTokens(basesTrimmed);
@@ -90,10 +93,13 @@ export function estimateGenerationInputTokens({
     testCaseCount: count,
     backend: {
       systemPrompt: systemPromptTokens,
+      readmeTemplate: readmeTemplateTokens,
+      systemPromptWithoutReadme: Math.max(0, systemPromptTokens - readmeTemplateTokens),
       promptWrapper: promptWrapperTokens,
       userRequestTotal: userRequestTokens,
       subtotal: systemPromptTokens + userRequestTokens,
     },
+    promptMeta: promptStats,
     frontend: {
       functionality: frontendFunctionality,
       appApiBaseUrls: frontendApiBases,

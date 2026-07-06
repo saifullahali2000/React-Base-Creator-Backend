@@ -256,6 +256,24 @@ ${QUESTION_TEXT_FRAMEWORK}
 
 SIZE: Keep solution and question_text compact so the JSON completes.`;
 
+/**
+ * Diagnostics for token UI — confirms README template is in system prompt at runtime.
+ * @param {'topin_base' | 'open_book'} [mode]
+ */
+export function getSystemPromptStats(mode = 'topin_base') {
+  const systemPrompt = mode === 'open_book' ? SYSTEM_PROMPT_OPEN_BOOK : SYSTEM_PROMPT;
+  const readmeBlock = PORTAL_README_IN_SYSTEM;
+  const readmeLoaded = systemPrompt.includes('BEGIN CANONICAL PORTAL README TEMPLATE');
+  return {
+    mode,
+    systemPromptChars: systemPrompt.length,
+    readmeBlockChars: readmeBlock.length,
+    readmeBlock,
+    readmeLoaded,
+    readmeInSystemPrompt: readmeLoaded && systemPrompt.includes(readmeBlock.slice(0, 80)),
+  };
+}
+
 export function buildOpenBookUserRequestText({
   functionality,
   appApiBaseUrls,

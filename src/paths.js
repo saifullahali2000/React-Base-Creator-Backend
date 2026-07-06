@@ -45,7 +45,9 @@ export const SAMPLE_FOLDER_ROOT = resolveSampleFolderRoot();
 
 export function logDeployAssetStatus() {
   const previewPkg = join(PREVIEW_WORKSPACE, 'package.json');
+  const readmePath = join(SAMPLE_FOLDER_ROOT, 'Ecommerce_Solution', 'README.md');
   const sampleOk = existsSync(join(SAMPLE_FOLDER_ROOT, 'Ecommerce'));
+  const readmeOk = existsSync(readmePath);
   const previewOk = existsSync(previewPkg);
   const previewDeps = existsSync(join(PREVIEW_WORKSPACE, 'node_modules', 'vite'));
 
@@ -55,6 +57,12 @@ export function logDeployAssetStatus() {
       !sampleOk ? 'Sample_Folder' : '',
       !previewOk ? 'preview-workspace' : '',
       '— connect the full monorepo on Render or run: node scripts/prepare-render.mjs',
+    );
+  } else if (!readmeOk) {
+    console.warn(
+      '[deploy] Ecommerce_Solution/README.md not found at',
+      readmePath,
+      '— system prompt will NOT include the full portal README template.',
     );
   } else if (!previewDeps) {
     console.warn(
