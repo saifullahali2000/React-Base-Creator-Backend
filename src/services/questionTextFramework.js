@@ -104,6 +104,7 @@ Inter, sans-serif
 
 FORBIDDEN in question_text:
 - Flat ### sections without <details>; skipping video or Resources (Colors + Font-families)
+- **Repeating the same section** (Design Files, Setup, Completion, etc.) more than once — each section appears exactly once
 - Empty or nested empty <details></details> placeholders inside any section
 - SVG Icons or Image URLs sections when the solution does not use them (omit entirely — no "not used" placeholders)
 - "No design files were provided" without route bullets in Design Files
@@ -206,20 +207,125 @@ function stripUnusedResourceSubsections(text, solution) {
   return out;
 }
 
+const SECTION_END_LOOKAHEAD = '(?=^###\\s+|^>\\s+###|(?![\\s\\S]))';
+
+/**
+ * @param {string} text
+ * @param {string[]} headingVariants
+ * @returns {string[]}
+ */
+function extractAllSectionBodies(text, ...headingVariants) {
+  const bodies = [];
+  for (const heading of headingVariants) {
+    const re = new RegExp(
+      `^###\\s+${escapeRegExp(heading)}\\s*$\\s*([\\s\\S]*?)${SECTION_END_LOOKAHEAD}`,
+      'gm',
+    );
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      bodies.push(m[1].trim());
+    }
+  }
+  return bodies;
+}
+
+/** Top-level <details> siblings (LLM often repeats the same block several times). */
+function extractTopLevelDetailsBlocks(html) {
+  const blocks = [];
+  const lower = (html || '').toLowerCase();
+  let i = 0;
+
+  while (i < html.length) {
+    const start = lower.indexOf('<details', i);
+    if (start === -1) break;
+
+    const openEnd = html.indexOf('>', start);
+    if (openEnd === -1) break;
+
+    let depth = 1;
+    let pos = openEnd + 1;
+
+    while (depth > 0 && pos < html.length) {
+      const nextOpen = lower.indexOf('<details', pos);
+      const nextClose = lower.indexOf('</details>', pos);
+      if (nextClose === -1) break;
+
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth += 1;
+        pos = nextOpen + 8;
+      } else {
+        depth -= 1;
+        if (depth === 0) {
+          blocks.push(html.slice(start, nextClose + '</details>'.length));
+          i = nextClose + '</details>'.length;
+        } else {
+          pos = nextClose + '</details>'.length;
+        }
+      }
+    }
+
+    if (depth !== 0) break;
+  }
+
+  return blocks;
+}
+
+/** Pick the richest <details> sibling (or flattened body) inside one ### section. */
+function pickBestDetailsContent(sectionRaw) {
+  const blocks = extractTopLevelDetailsBlocks(sectionRaw);
+  if (!blocks.length) {
+    return stripAllDetailsWrappers(sectionRaw);
+  }
+
+  const candidates = blocks
+    .map((block) => stripAllDetailsWrappers(block))
+    .filter((b) => b && !isEffectivelyEmpty(b));
+  if (!candidates.length) {
+    return stripAllDetailsWrappers(sectionRaw);
+  }
+
+  const substantive = candidates.filter(isSubstantiveSection);
+  const pool = substantive.length ? substantive : candidates;
+  return pool.sort((a, b) => b.length - a.length)[0];
+}
+
+/** Pick the richest duplicate section body (LLM often repeats sections). */
+function extractBestSectionBody(text, ...headingVariants) {
+  const bodies = extractAllSectionBodies(text, ...headingVariants)
+    .map((raw) => pickBestDetailsContent(raw))
+    .filter((b) => b && !isEffectivelyEmpty(b));
+  if (!bodies.length) return '';
+
+  const substantive = bodies.filter(isSubstantiveSection);
+  const pool = substantive.length ? substantive : bodies;
+  return pool.sort((a, b) => b.length - a.length)[0];
+}
+
+/** Remove sections that are always rebuilt from solution / test_cases. */
+function stripRebuiltSectionsFromSource(text) {
+  let t = text;
+  const headingPatterns = [
+    'Resources',
+    'Test Contract \\(Must Match Exactly\\)',
+    'Test Contract',
+  ];
+  for (const h of headingPatterns) {
+    const re = new RegExp(`^###\\s+${h}\\s*$[\\s\\S]*?${SECTION_END_LOOKAHEAD}`, 'gm');
+    t = t.replace(re, '');
+  }
+  t = t.replace(/<details>\s*<summary>\s*Colors\s*<\/summary>[\s\S]*?<\/details>/gi, '');
+  t = t.replace(/<details>\s*<summary>\s*Font-families\s*<\/summary>[\s\S]*?<\/details>/gi, '');
+  t = t.replace(/<details>\s*<summary>\s*Image URLs\s*<\/summary>[\s\S]*?<\/details>/gi, '');
+  t = t.replace(/<details>\s*<summary>\s*SVG Icons\s*<\/summary>[\s\S]*?<\/details>/gi, '');
+  return t.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 /**
  * @param {string} text
  * @param {string[]} headingVariants
  */
 function extractSectionRaw(text, ...headingVariants) {
-  for (const heading of headingVariants) {
-    const re = new RegExp(
-      `^###\\s+${escapeRegExp(heading)}\\s*$\\s*([\\s\\S]*?)(?=^###\\s+|^>\\s+###|$)`,
-      'im',
-    );
-    const m = text.match(re);
-    if (m) return m[1].trim();
-  }
-  return '';
+  return extractBestSectionBody(text, ...headingVariants);
 }
 
 /** @param {string} raw @param {string} [fallback] */
@@ -238,12 +344,16 @@ function unwrapDetails(body) {
 /** @param {string} text */
 function extractPreamble(text) {
   const firstH3 = text.search(/^###\s+/m);
-  const head = firstH3 === -1 ? text : text.slice(0, firstH3);
+  let head = firstH3 === -1 ? text : text.slice(0, firstH3);
+  head = head.replace(/\*\*Refer to the below video\.\*\*[\s\S]*?<br\s*\/?>\s*/gi, '');
   const titleMatch = head.match(/^##\s+(.+)$/m);
   const title = titleMatch ? titleMatch[1].trim() : 'Application';
 
   const bodyAfterTitle = head.replace(/^##\s+.+\n?/, '').trim();
-  const introLine = bodyAfterTitle.split('\n').find((l) => l.trim() && !l.includes('<video')) || '';
+  const introLine =
+    bodyAfterTitle.split('\n').find((l) => l.trim() && /in this project/i.test(l)) ||
+    bodyAfterTitle.split('\n').find((l) => l.trim()) ||
+    '';
 
   let intro;
   if (/in this project/i.test(introLine)) {
@@ -361,7 +471,7 @@ function extractImageUrls(solution) {
     while ((m = re.exec(content)) !== null) {
       if (seen.has(m[1])) continue;
       seen.add(m[1]);
-      rows.push({ usage: path.replace(/\\/g, '/'), url: m[1] });
+      rows.push({ usage: 'Newspaper / product image', url: m[1] });
     }
   }
   return rows;
@@ -479,7 +589,7 @@ function normalizeImportantNoteContent(raw) {
 function extractFlatFeatureBlock(text, afterHeading, beforeHeadings) {
   const before = beforeHeadings.map(escapeRegExp).join('|');
   const re = new RegExp(
-    `^###\\s+${escapeRegExp(afterHeading)}\\s*$\\s*([\\s\\S]*?)(?=^###\\s+(?:${before})\\b|$)`,
+    `^###\\s+${escapeRegExp(afterHeading)}\\s*$\\s*([\\s\\S]*?)(?=^###\\s+(?:${before})\\b|(?![\\s\\S]))`,
     'im',
   );
   const m = text.match(re);
@@ -487,135 +597,30 @@ function extractFlatFeatureBlock(text, afterHeading, beforeHeadings) {
   return stripAllDetailsWrappers(m[1]);
 }
 
-function isAlreadyPortalFormatted(qt) {
-  return (
-    qt.includes('<video') &&
-    /### Set Up Instructions/i.test(qt) &&
-    /### Resources/i.test(qt) &&
-    /<summary>Colors<\/summary>/i.test(qt)
-  );
-}
-
 /**
- * Light repair when text already has portal shell but sections are hollow.
  * @param {string} qt
  * @param {{ solution?: Record<string, string>; ideCoding?: { test_cases?: Array<{ display_text: string }> } }} generated
  */
-function repairPortalQuestionText(qt, generated) {
+function rebuildPortalQuestionText(qt, generated) {
   const solution = generated.solution || {};
+  const source = stripRebuiltSectionsFromSource(qt);
+  const { title, intro } = extractPreamble(source);
 
-  const replaceSection = (source, title, summary, body) => {
-    const block = wrapDetails(title, summary, body);
-    const re = new RegExp(
-      `^###\\s+${escapeRegExp(title)}\\s*$[\\s\\S]*?(?=^###\\s+|^>\\s+###|$)`,
-      'im',
-    );
-    return re.test(source) ? source.replace(re, block) : source;
-  };
-
-  let out = qt;
-
-  const designBody = prepareSectionBody(
-    extractSectionRaw(qt, 'Design Files'),
-    inferDesignRoutes(solution),
-  );
-  out = replaceSection(
-    out,
-    'Design Files',
-    'Click to view',
-    normalizeDesignFilesContent(designBody, solution),
-  );
-
-  out = replaceSection(out, 'Set Up Instructions', 'Click to view', normalizeSetupContent(''));
-
-  let completionBody = prepareSectionBody(extractSectionRaw(qt, 'Completion Instructions'));
-  if (!isSubstantiveSection(completionBody)) {
-    completionBody = extractFlatFeatureBlock(
-      qt,
-      'Completion Instructions',
-      ['Important Note', 'Important Notes', 'Additional Test-Critical', 'Test Contract', 'Resources'],
-    );
-  }
-  if (!/^The app must have/i.test(completionBody)) {
-    completionBody = `The app must have the following functionalities:\n\n${completionBody}`.trim();
-  }
-  out = replaceSection(out, 'Completion Instructions', 'Functionality to be added', completionBody);
-
-  const importantBody = prepareSectionBody(
-    extractSectionRaw(qt, 'Important Note', 'Important Notes'),
-  );
-  out = replaceSection(
-    out,
-    'Important Note',
-    'Click to view',
-    normalizeImportantNoteContent(importantBody),
-  );
-
-  const additionalBody = prepareSectionBody(
-    extractSectionRaw(qt, 'Additional Test-Critical Requirements'),
-  );
-  out = replaceSection(
-    out,
+  const designRaw = extractBestSectionBody(source, 'Design Files');
+  let completionRaw = extractBestSectionBody(source, 'Completion Instructions');
+  const apiRaw = extractBestSectionBody(source, 'API Requests & Responses');
+  const importantRaw = extractBestSectionBody(source, 'Important Note', 'Important Notes');
+  const additionalRaw = extractBestSectionBody(
+    source,
     'Additional Test-Critical Requirements',
-    'Click to view',
-    additionalBody || '_See Test Contract for exact assertions._',
   );
 
-  const contract = buildTestContractSection(generated.ideCoding?.test_cases || []);
-  if (contract) {
-    const contractRe = /^### Test Contract[\s\S]*?(?=^### Resources\b|^> ###|$)/im;
-    out = contractRe.test(out) ? out.replace(contractRe, contract + '\n\n') : `${out}\n\n${contract}`;
-  }
-
-  const resourcesRe = /^### Resources[\s\S]*?(?=^> ###|$)/im;
-  const resources = buildResourcesSection(solution);
-  out = resourcesRe.test(out) ? out.replace(resourcesRe, resources + '\n\n') : `${out}\n\n${resources}`;
-
-  if (!/> ### _Things to Keep in Mind_/i.test(out)) {
-    out += `\n\n${FOOTER_BLOCK}`;
-  }
-
-  out = stripUnusedResourceSubsections(out, solution);
-  return stripEmptyDetailsTags(out).trimEnd() + '\n';
-}
-
-/**
- * Restructure flat LLM question_text into portal README format.
- * @param {{ solution?: Record<string, string>; ideCoding?: { question_text?: string; short_text?: string; test_cases?: Array<{ display_text: string }> }; projectName?: string }} generated
- */
-export function normalizePortalQuestionText(generated) {
-  if (!generated?.ideCoding?.question_text) return generated;
-
-  const solution = generated.solution || {};
-  const qt = generated.ideCoding.question_text;
-
-  if (isAlreadyPortalFormatted(qt)) {
-    generated.ideCoding.question_text = repairPortalQuestionText(qt, generated);
-    return generated;
-  }
-
-  const { title, intro } = extractPreamble(qt);
-
-  const designRaw = extractSectionRaw(qt, 'Design Files');
-  const setupRaw = extractSectionRaw(qt, 'Set Up Instructions', 'Setup Instructions');
-  let completionRaw = extractSectionRaw(qt, 'Completion Instructions');
-  const apiRaw = extractSectionRaw(qt, 'API Requests & Responses');
-  const importantRaw = extractSectionRaw(qt, 'Important Note', 'Important Notes');
-  const additionalRaw = extractSectionRaw(qt, 'Additional Test-Critical Requirements');
-
-  if (isEffectivelyEmpty(completionRaw) || !isSubstantiveSection(completionRaw)) {
+  if (!isSubstantiveSection(completionRaw)) {
     completionRaw = extractFlatFeatureBlock(
-      qt,
+      source,
       'Completion Instructions',
       ['Important Note', 'Important Notes', 'Additional Test-Critical', 'Test Contract', 'Resources'],
     );
-    if (isEffectivelyEmpty(completionRaw) || !isSubstantiveSection(completionRaw)) {
-      const flat = qt
-        .replace(/^##\s+.+\n?/m, '')
-        .replace(/\n###\s+[\s\S]*/m, '')
-        .trim();
-      if (flat) completionRaw = flat;
-    }
   }
 
   let completionBody = prepareSectionBody(completionRaw);
@@ -632,7 +637,7 @@ export function normalizePortalQuestionText(generated) {
     '',
     wrapDetails('Design Files', 'Click to view', normalizeDesignFilesContent(designRaw, solution)),
     '',
-    wrapDetails('Set Up Instructions', 'Click to view', normalizeSetupContent(setupRaw)),
+    wrapDetails('Set Up Instructions', 'Click to view', normalizeSetupContent('')),
     '',
     wrapDetails('Completion Instructions', 'Functionality to be added', completionBody),
   ];
@@ -651,18 +656,30 @@ export function normalizePortalQuestionText(generated) {
       prepareSectionBody(additionalRaw) || '_See Test Contract for exact assertions._',
     ),
     '',
-    buildTestContractSection(generated.ideCoding.test_cases || []),
+    buildTestContractSection(generated.ideCoding?.test_cases || []),
     '',
     buildResourcesSection(solution),
     '',
     FOOTER_BLOCK,
   );
 
-  generated.ideCoding.question_text =
-    stripUnusedResourceSubsections(
-      stripEmptyDetailsTags(parts.filter((p) => p !== null).join('\n')),
-      solution,
-    ).trimEnd() + '\n';
+  return stripUnusedResourceSubsections(
+    stripEmptyDetailsTags(parts.filter(Boolean).join('\n')),
+    solution,
+  ).trimEnd();
+}
+
+/**
+ * Restructure flat LLM question_text into portal README format.
+ * @param {{ solution?: Record<string, string>; ideCoding?: { question_text?: string; short_text?: string; test_cases?: Array<{ display_text: string }> }; projectName?: string }} generated
+ */
+export function normalizePortalQuestionText(generated) {
+  if (!generated?.ideCoding?.question_text) return generated;
+
+  generated.ideCoding.question_text = `${rebuildPortalQuestionText(
+    generated.ideCoding.question_text,
+    generated,
+  )}\n`;
   return generated;
 }
 

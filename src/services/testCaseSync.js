@@ -90,10 +90,7 @@ export function syncTestCasesFromVitestFiles(generated) {
     weightage,
   }));
 
-  generated.ideCoding.question_text = syncQuestionTextTestContract(
-    generated.ideCoding.question_text || '',
-    generated.ideCoding.test_cases,
-  );
+  // Test Contract in question_text is rebuilt by normalizePortalQuestionText (portalPostProcess).
 
   return generated;
 }
