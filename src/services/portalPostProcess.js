@@ -111,6 +111,27 @@ export function ensureIdeCodingFreshUuids(generated) {
 }
 
 /**
+ * Copy normalized question_text into solution/readme.md.
+ * @param {{ solution?: Record<string, string>; ideCoding?: { question_text?: string; short_text?: string } }} generated
+ */
+export function syncReadmeFromQuestionText(generated) {
+  if (!generated?.solution || typeof generated.solution !== 'object') {
+    generated.solution = {};
+  }
+  if (!generated.ideCoding || typeof generated.ideCoding !== 'object') return generated;
+
+  const qt =
+    typeof generated.ideCoding.question_text === 'string' && generated.ideCoding.question_text.trim()
+      ? generated.ideCoding.question_text.trim()
+      : typeof generated.ideCoding.short_text === 'string' && generated.ideCoding.short_text.trim()
+        ? generated.ideCoding.short_text.trim()
+        : 'Question text unavailable.';
+
+  generated.solution['readme.md'] = `${qt}\n`;
+  return generated;
+}
+
+/**
  * @param {{ prefilled?: Record<string, string>; solution?: Record<string, string>; tests?: Record<string, string>; ideCoding?: { question_text?: string; short_text?: string } }} generated
  */
 export function applyPortalPostProcess(generated) {
@@ -161,17 +182,7 @@ export function applyPortalPostProcess(generated) {
   }
 
   normalizePortalQuestionText(generated);
-
-  if (generated.ideCoding && typeof generated.ideCoding === 'object') {
-    const qt =
-      typeof generated.ideCoding.question_text === 'string' && generated.ideCoding.question_text.trim()
-        ? generated.ideCoding.question_text.trim()
-        : typeof generated.ideCoding.short_text === 'string' && generated.ideCoding.short_text.trim()
-          ? generated.ideCoding.short_text.trim()
-          : 'Question text unavailable.';
-
-    generated.solution['readme.md'] = `${qt}\n`;
-  }
+  syncReadmeFromQuestionText(generated);
 
   return generated;
 }

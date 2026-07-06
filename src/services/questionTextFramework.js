@@ -1,7 +1,4 @@
-/**
- * Portal question_text / readme.md structure (matches Sample_Folder/Ecommerce_Solution/README.md).
- * Backend normalizes LLM output — do not rely on the model alone.
- */
+import { extractVitestCriticalHints } from './readmeQuality.js';
 
 export const QUESTION_TEXT_FRAMEWORK = `QUESTION TEXT (ideCoding.question_text) — PORTAL README FORMAT (mandatory):
 
@@ -574,6 +571,32 @@ function normalizeDesignFilesContent(raw, solution) {
   return body;
 }
 
+function mergeAdditionalWithVitestHints(additionalBody, generated) {
+  const base = prepareSectionBody(additionalBody);
+  const hints = extractVitestCriticalHints(generated?.tests);
+  if (!hints.length) {
+    return base || '_See Test Contract for exact assertions._';
+  }
+
+  const missing = hints.filter((hint) => {
+    const testId = hint.match(/data-testid="([^"]+)"/)?.[1];
+    if (testId && base.includes(testId)) return false;
+    const quoted = hint.match(/"([^"]{4,})"/)?.[1];
+    if (quoted && base.includes(quoted)) return false;
+    const cls = hint.match(/\.([a-z0-9_-]+)/i)?.[1];
+    if (cls && base.includes(cls)) return false;
+    return true;
+  });
+
+  if (!missing.length) return base || '_See Test Contract for exact assertions._';
+
+  const extra = missing.map((h) => `- ${h}`).join('\n');
+  if (!base || base.startsWith('_See Test Contract')) {
+    return extra;
+  }
+  return `${base}\n\n${extra}`;
+}
+
 function normalizeImportantNoteContent(raw) {
   let body = prepareSectionBody(raw);
   if (!body) {
@@ -653,7 +676,7 @@ function rebuildPortalQuestionText(qt, generated) {
     wrapDetails(
       'Additional Test-Critical Requirements',
       'Click to view',
-      prepareSectionBody(additionalRaw) || '_See Test Contract for exact assertions._',
+      mergeAdditionalWithVitestHints(additionalRaw, generated),
     ),
     '',
     buildTestContractSection(generated.ideCoding?.test_cases || []),

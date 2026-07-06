@@ -17,7 +17,7 @@ import {
   getSolutionValidateRetries,
   isSolutionValidationEnabled,
 } from './services/solutionValidator.js';
-import { repairGeneratedSolution } from './services/solutionRepair.js';
+import { runReadmeQualityLoop } from './services/readmeQualityLoop.js';
 import { estimateGenerationInputTokens } from './services/tokenEstimate.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -262,6 +262,18 @@ async function runGeneratePipeline(req, emit) {
   applyPortalPostProcess(generated);
   applyStaticSolutionFixes(generated);
 
+  if (assessmentMode !== 'open_book') {
+    emit({ type: 'progress', step: 2, message: 'Validating README template...' });
+    await runReadmeQualityLoop({
+      generated,
+      emit,
+      provider,
+      apiKey: genParams.apiKey,
+      model: genParams.model,
+      functionality: genParams.functionality,
+    });
+  }
+
   if (isSolutionValidationEnabled()) {
     const validateAttempts = getSolutionValidateRetries();
     let lastValidationErrors = [];
@@ -289,6 +301,16 @@ async function runGeneratePipeline(req, emit) {
         applySampleTemplates(generated);
         applyPortalPostProcess(generated);
         applyStaticSolutionFixes(generated);
+        if (assessmentMode !== 'open_book') {
+          await runReadmeQualityLoop({
+            generated,
+            emit,
+            provider,
+            apiKey: genParams.apiKey,
+            model: genParams.model,
+            functionality: genParams.functionality,
+          });
+        }
       }
 
       const validation = await validateSolutionBuild(generated.solution);
@@ -483,6 +505,7 @@ async function handleGenerationFileSave(req, res) {
         return res.status(400).json({ error: `Invalid ideCoding JSON: ${e.message}` });
       }
       generated.ideCoding = parsed;
+      applyPortalPostProcess(generated);
     } else {
       if (typeof relPath !== 'string' || !relPath.trim()) {
         return res.status(400).json({ error: 'path is required for prefilled, solution, and tests' });
@@ -515,6 +538,7 @@ app.post('/api/generations/:id/restore', async (req, res) => {
   try {
     applySampleTemplates(g);
     applyPortalPostProcess(g);
+    await runReadmeQualityLoop({ generated: g, emit: () => {} });
     await writePreviewFiles(g.solution);
     await ensurePreviewRunning();
     const assessmentMode = normalizeAssessmentModeForApi(g.generatorOptions?.assessmentMode);
