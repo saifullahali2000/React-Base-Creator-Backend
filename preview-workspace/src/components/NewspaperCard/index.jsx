@@ -1,24 +1,34 @@
 import './index.css';
 
 const NewspaperCard = ({ article, onAddToCart, isInCart }) => {
-  const { title, author, publishedDate, category, imageUrl } = article;
+  const handleClick = () => {
+    onAddToCart(article);
+  };
 
   return (
-    <div className='newspaper-card'>
-      <img src={imageUrl} alt={title} className='newspaper-image' />
-      <div className='newspaper-content'>
-        <span className='newspaper-category'>{category}</span>
-        <h2 className='newspaper-title'>{title}</h2>
-        <p className='newspaper-author'>By {author}</p>
-        <p className='newspaper-date'>{new Date(publishedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <article className='newspaper-card'>
+      <div className='newspaper-card__image-wrapper'>
+        <img
+          src={article.imageUrl}
+          alt={article.title}
+          className='newspaper-card__image'
+        />
+        <span className='newspaper-card__category'>{article.category}</span>
+      </div>
+      <div className='newspaper-card__content'>
+        <h3 className='newspaper-card__title'>{article.title}</h3>
+        <p className='newspaper-card__author'>By {article.author}</p>
+        <p className='newspaper-card__date'>{new Date(article.publishedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p className='newspaper-card__summary'>{article.summary}</p>
         <button
-          onClick={() => onAddToCart(article)}
-          className={`add-to-cart-btn ${isInCart ? 'added' : ''}`}
+          onClick={handleClick}
+          disabled={isInCart}
+          className={`newspaper-card__button ${isInCart ? 'newspaper-card__button--added' : ''}`}
         >
           {isInCart ? 'Added to Cart' : 'Add to Cart'}
         </button>
       </div>
-    </div>
+    </article>
   );
 };
 

@@ -1,18 +1,235 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #f5f7fa;
-}
-
-.app-container {
+.app {
   min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.app-header__title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.app-header__subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.search-bar {
+  padding: 1.5rem;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-bar__input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.search-bar__input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.app-main {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.newspapers-container {
+  flex: 0 0 75%;
+}
+
+.newspapers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.newspaper-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.newspaper-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.newspaper-card__image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.newspaper-card__content {
+  padding: 1.25rem;
+}
+
+.newspaper-card__title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+}
+
+.newspaper-card__author {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.newspaper-card__date {
+  margin: 0 0 0.5rem 0;
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.newspaper-card__category {
+  display: inline-block;
+  margin: 0 0 1rem 0;
+  padding: 0.25rem 0.75rem;
+  background-color: #f0f0f0;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.newspaper-card__button {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.3s, transform 0.2s;
+}
+
+.newspaper-card__button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.newspaper-card__button:disabled {
+  background: #4caf50;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.newspaper-card__button--added {
+  background: #4caf50;
+}
+
+.cart-sidebar {
+  flex: 0 0 25%;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  height: fit-content;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.cart-sidebar__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.75rem;
+}
+
+.cart-sidebar__empty {
+  color: #999;
+  text-align: center;
+  padding: 2rem 0;
+  font-style: italic;
+}
+
+.cart-sidebar__items {
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+
+.cart-item {
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.cart-item__title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.3;
+}
+
+.cart-item__author {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state__text {
+  font-size: 1.25rem;
+  color: #999;
+}
+
+@media (max-width: 1024px) {
+  .app-main {
+    flex-direction: column;
+  }
+  
+  .newspapers-container,
+  .cart-sidebar {
+    flex: 1 1 auto;
+  }
+  
+  .cart-sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .newspapers-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .app-header__title {
+    font-size: 2rem;
+  }
 }

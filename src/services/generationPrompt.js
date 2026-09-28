@@ -1,8 +1,3 @@
-import { QUESTION_TEXT_FRAMEWORK } from './questionTextFramework.js';
-import { getPortalReadmeSystemBlock, PORTAL_README_USER_HINT } from './readmeReference.js';
-
-const PORTAL_README_IN_SYSTEM = getPortalReadmeSystemBlock();
-
 export const UI_DESIGN_STANDARDS = `UI & DESIGN (mandatory — production-grade, company-standard; NOT demo/wireframe quality):
 - Visual bar: match NxtWave portal reference quality (Sample_Folder/Ecommerce_Solution) — polished SaaS / e-commerce UI. Never ship a bare, ugly, or "minimum CSS" layout.
 - FORBIDDEN: default browser-only styling; empty or near-empty CSS files; inline style={{...}} as the main styling approach; one-line rules like "padding: 10px" only; unstyled <button>/<input>; plain white pages with unstyled text; missing :hover/:focus states; no responsive rules.
@@ -51,7 +46,7 @@ In JSX and JavaScript embedded in those JSON strings, prefer single-quoted JS st
     "ide_session_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
     "short_text": "Project Title",
     "question_key": 0,
-    "question_text": "## Brand — Application Type\\n\\n(Full portal README markdown: intro, video block, Design/Setup/Completion/Important/Additional sections in <details>, Test Contract, Resources with color swatches — follow QUESTION TEXT rules below)",
+    "question_text": "## Project Title\\n\\nMarkdown instructions for the learner: app overview, npm install / npm run dev setup, completion requirements, exact UI strings and data-testid values needed to pass tests, and API docs if applicable.",
     "question_type": "IDE_BASED_CODING",
     "content_type": "MARKDOWN",
     "toughness": "EASY",
@@ -122,11 +117,11 @@ PREFILLED RULES (strictly enforced):
 TESTS JSON RULES:
 - In "tests", ONLY include generated Vitest files: paths matching src/__tests__/**/*.jsx (your test code). Do NOT put package.json, vite.config.js, setupTests, or other scaffold in "tests" — backend merges those from Sample_Folder/Ecommerce_Tests so the portal layout matches production.
 
-SIZE (critical): The entire reply is one JSON object. Keep solution and tests compact—but ideCoding.question_text MUST be a FULL portal README matching the CANONICAL PORTAL README TEMPLATE in your system instructions: rich Completion Instructions, Important Note, test-critical bullets, Resources with Colors + Font-families only (add SVG Icons / Image URLs only when used). Never output empty <details> blocks.
+SIZE (critical): The entire reply is one JSON object. Keep solution and tests compact. ideCoding.question_text should be clear markdown a learner can follow to build the app and pass tests.
 
-${PORTAL_README_IN_SYSTEM}
-
-${QUESTION_TEXT_FRAMEWORK}`;
+QUESTION TEXT (ideCoding.question_text):
+- Markdown for learners: what to build, setup steps, feature requirements, exact labels / placeholders / data-testid attributes tests rely on.
+- When tests exist, include a Test Contract section listing each test expectation in plain language.`;
 
 export function buildUserRequestText({
   testCaseCount,
@@ -183,7 +178,7 @@ ${functionality.trim()}`;
       '\n\n## UI / design (no reference images — company-standard required)\nNo design screenshots were uploaded. You MUST still deliver production-grade UI at NxtWave portal quality (like Sample_Folder/Ecommerce_Solution): substantial CSS in every component (80+ lines for main pages), Inter font, cohesive color palette (#1a1a1a primary), styled forms/buttons/cards/tables, hover/focus/disabled states, loading/empty/error states, and responsive @media rules. NEVER output bare HTML, empty CSS files, or minimal one-line styles.\n';
   }
 
-  return `${text}\n\n${PORTAL_README_USER_HINT}\n`;
+  return text;
 }
 
 /** Open book: reference solution only — no prefilled learner stub, no tests. */
@@ -250,11 +245,10 @@ COMPONENT RULES:
 SCAFFOLD (backend-enforced):
 - DO NOT put in "solution" JSON: .nvmrc, .prettierrc, eslint.config.js, index.html, vite.config.js, src/main.jsx, src/setupTests.js, package.json, .gitignore, public/vite.svg — the backend merges these from Sample_Folder/Ecommerce_Solution.
 
-${PORTAL_README_IN_SYSTEM}
+SIZE: Keep solution and question_text compact so the JSON completes.
 
-${QUESTION_TEXT_FRAMEWORK}
-
-SIZE: Keep solution and question_text compact so the JSON completes.`;
+QUESTION TEXT (ideCoding.question_text):
+- Markdown for learners: overview, setup, completion requirements, API docs if applicable.`;
 
 /**
  * Diagnostics for token UI — confirms README template is in system prompt at runtime.
@@ -262,15 +256,9 @@ SIZE: Keep solution and question_text compact so the JSON completes.`;
  */
 export function getSystemPromptStats(mode = 'topin_base') {
   const systemPrompt = mode === 'open_book' ? SYSTEM_PROMPT_OPEN_BOOK : SYSTEM_PROMPT;
-  const readmeBlock = PORTAL_README_IN_SYSTEM;
-  const readmeLoaded = systemPrompt.includes('BEGIN CANONICAL PORTAL README TEMPLATE');
   return {
     mode,
     systemPromptChars: systemPrompt.length,
-    readmeBlockChars: readmeBlock.length,
-    readmeBlock,
-    readmeLoaded,
-    readmeInSystemPrompt: readmeLoaded && systemPrompt.includes(readmeBlock.slice(0, 80)),
   };
 }
 
@@ -312,5 +300,5 @@ ${functionality.trim()}`;
       '\n\n## UI / design (no reference images — company-standard required)\nBuild production-grade UI at NxtWave portal quality: substantial per-component CSS, professional typography/spacing/colors, interactive states, UX states (loading/empty/error), and responsive breakpoints. No bare or minimal styling.\n';
   }
 
-  return `${text}\n\n${PORTAL_README_USER_HINT}\n`;
+  return text;
 }

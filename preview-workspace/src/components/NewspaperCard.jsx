@@ -1,16 +1,16 @@
 const NewspaperCard = ({ article, onAddToCart, isInCart }) => {
   return (
     <div className='newspaper-card'>
-      <img src={article.imageUrl} alt={article.title} className='newspaper-image' />
-      <div className='newspaper-details'>
-        <h2 className='newspaper-title'>{article.title}</h2>
-        <p className='newspaper-author'>By {article.author}</p>
-        <p className='newspaper-date'>{article.publishedDate}</p>
-        <p className='newspaper-category'>{article.category}</p>
+      <img src={article.imageUrl} alt={article.title} className='newspaper-card__image' />
+      <div className='newspaper-card__content'>
+        <h3 className='newspaper-card__title'>{article.title}</h3>
+        <p className='newspaper-card__author'>By {article.author}</p>
+        <p className='newspaper-card__date'>{new Date(article.publishedDate).toLocaleDateString()}</p>
+        <p className='newspaper-card__category'>{article.category}</p>
         <button
+          className={`newspaper-card__button ${isInCart ? 'newspaper-card__button--added' : ''}`}
           onClick={() => onAddToCart(article)}
           disabled={isInCart}
-          className={isInCart ? 'btn-added' : 'btn-add'}
         >
           {isInCart ? 'Added to Cart' : 'Add to Cart'}
         </button>

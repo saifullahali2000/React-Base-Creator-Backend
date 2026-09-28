@@ -71,7 +71,6 @@ export function estimateGenerationInputTokens({
   const systemPromptTokens = estimateTextTokens(systemPrompt);
   const userRequestTokens = estimateTextTokens(userRequestText);
   const promptStats = getSystemPromptStats(isOpenBook ? 'open_book' : 'topin_base');
-  const readmeTemplateTokens = estimateTextTokens(promptStats.readmeBlock);
 
   const frontendFunctionality = estimateTextTokens(functionalityTrimmed);
   const frontendApiBases = estimateTextTokens(basesTrimmed);
@@ -93,8 +92,6 @@ export function estimateGenerationInputTokens({
     testCaseCount: count,
     backend: {
       systemPrompt: systemPromptTokens,
-      readmeTemplate: readmeTemplateTokens,
-      systemPromptWithoutReadme: Math.max(0, systemPromptTokens - readmeTemplateTokens),
       promptWrapper: promptWrapperTokens,
       userRequestTotal: userRequestTokens,
       subtotal: systemPromptTokens + userRequestTokens,

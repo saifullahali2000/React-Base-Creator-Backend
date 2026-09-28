@@ -90,7 +90,12 @@ export function syncTestCasesFromVitestFiles(generated) {
     weightage,
   }));
 
-  // Test Contract in question_text is rebuilt by normalizePortalQuestionText (portalPostProcess).
+  if (typeof generated.ideCoding.question_text === 'string') {
+    generated.ideCoding.question_text = syncQuestionTextTestContract(
+      generated.ideCoding.question_text,
+      generated.ideCoding.test_cases,
+    );
+  }
 
   return generated;
 }

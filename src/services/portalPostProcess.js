@@ -8,7 +8,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { syncTestCasesFromVitestFiles } from './testCaseSync.js';
-import { normalizePortalQuestionText } from './questionTextFramework.js';
 import { enforceTestEnumConvention } from './testCaseEnum.js';
 
 const IDE_BRIDGE_SCRIPT =
@@ -111,7 +110,7 @@ export function ensureIdeCodingFreshUuids(generated) {
 }
 
 /**
- * Copy normalized question_text into solution/readme.md.
+ * Copy ideCoding.question_text into solution/readme.md.
  * @param {{ solution?: Record<string, string>; ideCoding?: { question_text?: string; short_text?: string } }} generated
  */
 export function syncReadmeFromQuestionText(generated) {
@@ -181,7 +180,6 @@ export function applyPortalPostProcess(generated) {
     syncTestCasesFromVitestFiles(generated);
   }
 
-  normalizePortalQuestionText(generated);
   syncReadmeFromQuestionText(generated);
 
   return generated;
